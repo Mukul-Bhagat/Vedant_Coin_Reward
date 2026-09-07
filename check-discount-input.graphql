@@ -1,0 +1,20 @@
+query {
+  __type(name: "DiscountAutomaticAppInput") {
+    name
+    inputFields {
+      name
+      type {
+        kind
+        name
+        ofType {
+          kind
+          name
+          ofType {
+            kind
+            name
+          }
+        }
+      }
+    }
+  }
+}

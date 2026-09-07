@@ -1,0 +1,8 @@
+query {
+  __type(name: "DiscountClass") {
+    name
+    enumValues {
+      name
+    }
+  }
+}

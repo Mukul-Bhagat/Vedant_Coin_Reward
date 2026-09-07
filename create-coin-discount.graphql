@@ -1,0 +1,27 @@
+mutation {
+  discountAutomaticAppCreate(
+    automaticAppDiscount: {
+      title: "Vedant Coins"
+      functionHandle: "coin-discount-v2"
+      discountClasses: [ORDER]
+      startsAt: "2026-09-05T00:00:00Z"
+    }
+  ) {
+    automaticAppDiscount {
+      discountId
+      title
+      startsAt
+      endsAt
+      status
+      appDiscountType {
+        appKey
+        functionId
+      }
+    }
+    userErrors {
+      field
+      message
+      code
+    }
+  }
+}

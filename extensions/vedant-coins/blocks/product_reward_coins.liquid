@@ -1,0 +1,102 @@
+{% assign reward_source = product.metafields.custom.reward_coins_earned.value | default: product.metafields.custom.reward_coins_earned %}
+{% assign reward_coins = reward_source | plus: 0 %}
+
+{% if product and reward_coins > 0 %}
+  <div id="vedant-product-rewards-{{ block.id }}" class="vedant-product-rewards">
+    <div class="vedant-product-rewards__icon" aria-hidden="true">🪙</div>
+    <div class="vedant-product-rewards__copy">
+      <div class="vedant-product-rewards__eyebrow">Product reward coins</div>
+      <div class="vedant-product-rewards__title">Earn {{ reward_coins }} Vedant Coins</div>
+      <div class="vedant-product-rewards__subtitle">on this purchase</div>
+    </div>
+  </div>
+
+<style>
+    #vedant-product-rewards-{{ block.id }} {
+      display: flex;
+      align-items: center;
+      width: 100%;
+      max-width: 100%;
+      min-width: 0;
+      gap: 12px;
+      margin: 12px 0;
+      padding: 12px 14px;
+      border: 1px solid #f0dce6;
+      border-radius: 14px;
+      color: #2a2028;
+      background: linear-gradient(135deg, #fff8fb 0%, #fff4f8 100%);
+      box-shadow: 0 8px 22px rgba(93, 34, 61, .08);
+      font-size: 13px;
+      line-height: 1.35;
+      box-sizing: border-box;
+      overflow: hidden;
+    }
+
+    #vedant-product-rewards-{{ block.id }} .vedant-product-rewards__icon {
+      display: grid;
+      flex: 0 0 40px;
+      width: 40px;
+      height: 40px;
+      place-items: center;
+      border-radius: 12px;
+      background: #ffe3ee;
+      font-size: 22px;
+    }
+
+    #vedant-product-rewards-{{ block.id }} .vedant-product-rewards__copy {
+      display: grid;
+      gap: 2px;
+      min-width: 0;
+    }
+
+    #vedant-product-rewards-{{ block.id }} .vedant-product-rewards__eyebrow {
+      color: #f34f91;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    #vedant-product-rewards-{{ block.id }} .vedant-product-rewards__title {
+      font-size: 14px;
+      font-weight: 700;
+      overflow-wrap: anywhere;
+    }
+
+    #vedant-product-rewards-{{ block.id }} .vedant-product-rewards__subtitle {
+      color: #756b75;
+      overflow-wrap: anywhere;
+    }
+
+    @media (max-width: 640px) {
+      #vedant-product-rewards-{{ block.id }} {
+        gap: 10px;
+        margin: 10px 0;
+        padding: 11px 12px;
+      }
+
+      #vedant-product-rewards-{{ block.id }} .vedant-product-rewards__icon {
+        flex-basis: 36px;
+        width: 36px;
+        height: 36px;
+        border-radius: 11px;
+        font-size: 20px;
+      }
+
+      #vedant-product-rewards-{{ block.id }} .vedant-product-rewards__title {
+        font-size: 13px;
+      }
+    }
+  </style>
+{% endif %}
+
+{% schema %}
+{
+  "name": "Product reward coins",
+  "target": "section",
+  "enabled_on": {
+    "templates": ["product"]
+  },
+  "settings": []
+}
+{% endschema %}

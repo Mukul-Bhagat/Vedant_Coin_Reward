@@ -1,0 +1,19 @@
+query {
+  discountNode(id: "gid://shopify/DiscountAutomaticNode/1501653926060") {
+    id
+    discount {
+      __typename
+      ... on DiscountAutomaticApp {
+        title
+        status
+        startsAt
+        endsAt
+        appDiscountType {
+          appKey
+          functionId
+          title
+        }
+      }
+    }
+  }
+}

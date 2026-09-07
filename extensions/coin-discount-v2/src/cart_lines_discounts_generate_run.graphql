@@ -1,0 +1,30 @@
+query CartInput {
+  cart {
+    attribute(key: "_vedant_coin_discount") {
+      key
+      value
+    }
+    buyerIdentity {
+      isAuthenticated
+      customer {
+        id
+      }
+    }
+    cost {
+      subtotalAmount {
+        amount
+      }
+    }
+    lines {
+      id
+      cost {
+        subtotalAmount {
+          amount
+        }
+      }
+    }
+  }
+  discount {
+    discountClasses
+  }
+}

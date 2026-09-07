@@ -1,0 +1,57 @@
+{% assign rating_source = product.metafields.reviews.rating.value %}
+{% assign rating_value = rating_source.rating | default: rating_source | plus: 0 %}
+{% assign rating_scale = rating_source.scale_max | default: 5 | plus: 0 %}
+
+{% if product and rating_value > 0 %}
+  {% assign rating_stars = rating_value | round %}
+  <div id="vedant-rating-{{ block.id }}" class="vedant-rating">
+    <span class="vedant-rating__label">{{ 'ratings.stars.label' | t }}</span>
+    <span class="vedant-rating__stars" aria-hidden="true">
+      {% render 'stars', rating: rating_stars %}
+    </span>
+    <span class="vedant-rating__summary">{{ rating_value }} / {{ rating_scale }}</span>
+  </div>
+
+  <style>
+    #vedant-rating-{{ block.id }} {
+      display: inline-flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      margin: 12px 0;
+      padding: 10px 12px;
+      border: 1px solid #eadfe5;
+      border-radius: 12px;
+      color: #2a2028;
+      background: #fff;
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    #vedant-rating-{{ block.id }} .vedant-rating__label {
+      font-weight: 700;
+    }
+
+    #vedant-rating-{{ block.id }} .vedant-rating__stars {
+      letter-spacing: 1px;
+      color: #f34f91;
+      white-space: nowrap;
+    }
+
+    #vedant-rating-{{ block.id }} .vedant-rating__summary {
+      color: #756b75;
+      white-space: nowrap;
+    }
+  </style>
+{% endif %}
+
+{% schema %}
+{
+  "name": "Ratings",
+  "target": "section",
+  "enabled_on": {
+    "templates": ["product"]
+  },
+  "settings": []
+}
+{% endschema %}

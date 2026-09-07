@@ -1,0 +1,320 @@
+<div id="vedant-header-coins-{{ block.id }}" class="vedant-header-coins" hidden>
+  <button
+    class="vedant-header-coins__trigger"
+    type="button"
+    aria-expanded="false"
+    aria-controls="vedant-header-coins-popup-{{ block.id }}"
+    aria-label="View your Vedant coin balance"
+  >
+    <span class="vedant-header-coins__icon" aria-hidden="true">🪙</span>
+    <span class="vedant-header-coins__label">
+      <span class="vedant-header-coins__amount" data-vedant-header-total>...</span>
+      <span class="vedant-header-coins__unit">Coins</span>
+    </span>
+  </button>
+  <div id="vedant-header-coins-popup-{{ block.id }}" class="vedant-header-coins__popup" hidden>
+    <div class="vedant-header-coins__popup-icon" aria-hidden="true">🪙</div>
+    <strong>Your Coins</strong>
+    <b data-vedant-header-popup-total>Balance unavailable</b>
+    <p>How to use coins?</p>
+    <ol>
+      <li>Add products to your cart.</li>
+      <li>Choose “Use Coins” on the cart page.</li>
+      <li>Your coins apply automatically up to the eligible cart value.</li>
+      <li>1 coin = ₹1 discount.</li>
+    </ol>
+    <small>Coins earned from your current purchase can be used on your next purchase.</small>
+  </div>
+</div>
+
+<style>
+  #vedant-header-coins-{{ block.id }} {
+    --vedant-pink: #f34f91;
+    --vedant-ink: #2a2028;
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    flex: 0 0 auto;
+    min-width: 0;
+    margin-left: 8px;
+    white-space: nowrap;
+    z-index: 20;
+    font-family: inherit;
+  }
+
+  #vedant-header-coins-{{ block.id }}[hidden] {
+    display: none;
+  }
+
+  #vedant-header-coins-{{ block.id }} .vedant-header-coins__trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    min-height: 36px;
+    padding: 7px 12px;
+    max-width: 100%;
+    min-width: 0;
+    border: 1px solid rgba(243, 79, 145, 0.22);
+    border-radius: 999px;
+    color: var(--vedant-ink);
+    background: #fff7fa;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+  }
+
+  #vedant-header-coins-{{ block.id }} .vedant-header-coins__icon {
+    flex: 0 0 auto;
+    font-size: 17px;
+    line-height: 1;
+  }
+
+  #vedant-header-coins-{{ block.id }} .vedant-header-coins__label {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    min-width: 0;
+    white-space: nowrap;
+  }
+
+  #vedant-header-coins-{{ block.id }} .vedant-header-coins__amount {
+    font-variant-numeric: tabular-nums;
+  }
+
+  #vedant-header-coins-{{ block.id }} .vedant-header-coins__unit {
+    display: inline-block;
+  }
+
+  #vedant-header-coins-{{ block.id }} .vedant-header-coins__popup {
+    position: absolute;
+    top: calc(100% + 10px);
+    right: 0;
+    width: min(320px, calc(100vw - 28px));
+    padding: 18px;
+    border: 1px solid #f0dce6;
+    border-radius: 15px;
+    color: var(--vedant-ink);
+    background: #fff;
+    box-shadow: 0 16px 38px rgba(73, 28, 51, 0.16);
+    font-size: 13px;
+  }
+
+  #vedant-header-coins-{{ block.id }} .vedant-header-coins__popup[hidden] {
+    display: none;
+  }
+
+  #vedant-header-coins-{{ block.id }} .vedant-header-coins__popup-icon {
+    float: left;
+    margin-right: 9px;
+    font-size: 24px;
+  }
+
+  #vedant-header-coins-{{ block.id }} .vedant-header-coins__popup b {
+    display: block;
+    margin-top: 5px;
+    color: var(--vedant-pink);
+    font-size: 22px;
+  }
+
+  #vedant-header-coins-{{ block.id }} .vedant-header-coins__popup p {
+    clear: both;
+    margin: 17px 0 7px;
+    font-weight: 700;
+  }
+
+  #vedant-header-coins-{{ block.id }} .vedant-header-coins__popup ol {
+    margin: 0;
+    padding-left: 20px;
+    color: #615660;
+    line-height: 1.55;
+  }
+
+  #vedant-header-coins-{{ block.id }} .vedant-header-coins__popup small {
+    display: block;
+    margin-top: 12px;
+    color: #615660;
+    line-height: 1.45;
+  }
+
+  @media (max-width: 640px) {
+    #vedant-header-coins-{{ block.id }} {
+      margin-left: 6px;
+    }
+
+    #vedant-header-coins-{{ block.id }} .vedant-header-coins__trigger {
+      min-height: 30px;
+      padding: 5px 8px;
+      gap: 5px;
+      font-size: 11px;
+    }
+
+    #vedant-header-coins-{{ block.id }} .vedant-header-coins__icon {
+      font-size: 16px;
+    }
+
+    #vedant-header-coins-{{ block.id }} .vedant-header-coins__amount {
+      font-size: 12px;
+    }
+
+    #vedant-header-coins-{{ block.id }} .vedant-header-coins__unit {
+      display: none;
+    }
+
+    #vedant-header-coins-{{ block.id }} .vedant-header-coins__popup {
+      position: fixed;
+      top: 54px;
+      right: 12px;
+      width: min(300px, calc(100vw - 24px));
+    }
+  }
+</style>
+
+<script>
+(function () {
+  const root = document.getElementById("vedant-header-coins-{{ block.id }}");
+  if (!root) return;
+  if (root.dataset.vedantCoinsInitialized === "true") return;
+  root.dataset.vedantCoinsInitialized = "true";
+
+  const trigger = root.querySelector(".vedant-header-coins__trigger");
+  const popup = root.querySelector(".vedant-header-coins__popup");
+  const total = root.querySelector("[data-vedant-header-total]");
+  const popupTotal = root.querySelector("[data-vedant-header-popup-total]");
+  const headerSelectors = [
+    ".header__icons",
+    ".header-icons",
+    ".header__icon-list",
+    "[data-header-icons]",
+    "header",
+    ".shopify-section-header",
+  ];
+  const cartSelectors = [
+    ".header__icon--cart",
+    "a[href*='/cart']",
+    "button[aria-label*='Cart']",
+    "button[title*='Cart']",
+    "[data-cart-icon]",
+    ".cart-count-bubble",
+  ];
+  const accountSelectors = [
+    ".header__icon--account",
+    "a[href*='/account']",
+    "button[aria-label*='Account']",
+    "button[title*='Account']",
+  ];
+
+  let currentCoins = null;
+  let refreshTimer;
+  let retryTimer;
+
+  function render() {
+    if (currentCoins === null) {
+      total.textContent = "...";
+      popupTotal.textContent = "Balance unavailable";
+      trigger.setAttribute("aria-label", "Vedant coin balance unavailable. Retry shortly");
+      return;
+    }
+
+    const label = currentCoins + " Coins";
+    total.textContent = String(currentCoins);
+    popupTotal.textContent = label;
+    trigger.setAttribute("aria-label", currentCoins + " coins available. View your Vedant coin balance");
+  }
+
+  function resolveHeaderPlacement() {
+    const container = document.querySelector(headerSelectors.join(", "));
+    if (!container) return null;
+    const scope = container.querySelector ? container : document;
+    const reference = [...cartSelectors, ...accountSelectors]
+      .map(function (selector) {
+        return scope.querySelector(selector);
+      })
+      .find(Boolean);
+    return {
+      container,
+      reference: reference ? reference.closest("a, button") || reference : null,
+    };
+  }
+
+  function mount() {
+    const placement = resolveHeaderPlacement();
+    if (!placement) return false;
+
+    const { container, reference } = placement;
+    if (reference && reference.parentElement) {
+      if (root.parentElement !== reference.parentElement || root.nextElementSibling !== reference) {
+        reference.parentElement.insertBefore(root, reference);
+      }
+    } else if (!container.contains(root)) {
+      container.appendChild(root);
+    }
+
+    return true;
+  }
+
+  async function refresh() {
+    if (!mount()) {
+      root.hidden = true;
+      return;
+    }
+
+    root.hidden = false;
+
+    try {
+      const response = await fetch("/apps/coins", {
+        credentials: "same-origin",
+        cache: "no-store",
+        headers: { Accept: "application/json" }
+      });
+      if (!response.ok) throw new Error("Unable to load coin balance");
+      const data = await response.json();
+      const value = Number(data?.availableCoins);
+      if (!Number.isFinite(value) || value < 0) throw new Error("Invalid coin balance");
+      currentCoins = Math.floor(value);
+    } catch (error) {
+      console.error("Vedant header coins error:", error);
+      clearTimeout(retryTimer);
+      retryTimer = setTimeout(refresh, 5000);
+    }
+
+    render();
+  }
+
+  function closePopup() {
+    popup.hidden = true;
+    trigger.setAttribute("aria-expanded", "false");
+  }
+
+  function scheduleRefresh() {
+    clearTimeout(refreshTimer);
+    refreshTimer = setTimeout(refresh, 90);
+  }
+
+  trigger.addEventListener("click", function (event) {
+    event.stopPropagation();
+    const open = popup.hidden;
+    popup.hidden = !open;
+    trigger.setAttribute("aria-expanded", open ? "true" : "false");
+  });
+
+  document.addEventListener("click", function (event) {
+    if (!root.contains(event.target)) closePopup();
+  });
+
+  document.addEventListener("keydown", function (event) {
+    if (event.key === "Escape") closePopup();
+  });
+
+  document.addEventListener("cart:updated", scheduleRefresh);
+  refresh();
+})();
+</script>
+
+{% schema %}
+{
+  "name": "Header coin balance",
+  "target": "body",
+  "settings": []
+}
+{% endschema %}

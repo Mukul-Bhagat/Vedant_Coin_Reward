@@ -1,0 +1,55 @@
+{
+  "payload": {
+    "export": "cart-lines-discounts-generate-run",
+    "target": "cart.lines.discounts.generate.run",
+    "input": {
+      "cart": {
+        "buyerIdentity": {
+          "isAuthenticated": true,
+          "customer": {
+            "id": "gid://shopify/Customer/9709033750700"
+          }
+        },
+        "attribute": {
+          "key": "_vedant_coin_discount",
+          "value": "50"
+        },
+        "cost": {
+          "subtotalAmount": {
+            "amount": "1499.90"
+          }
+        },
+        "lines": []
+      },
+      "discount": {
+        "discountClasses": ["ORDER"]
+      }
+    },
+    "output": {
+      "operations": [
+        {
+          "orderDiscountsAdd": {
+            "candidates": [
+              {
+                "message": "Vedant Coins",
+                "value": {
+                  "fixedAmount": {
+                    "amount": "50.00"
+                  }
+                },
+                "targets": [
+                  {
+                    "orderSubtotal": {
+                      "excludedCartLineIds": []
+                    }
+                  }
+                ]
+              }
+            ],
+            "selectionStrategy": "FIRST"
+          }
+        }
+      ]
+    }
+  }
+}

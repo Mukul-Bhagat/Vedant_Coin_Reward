@@ -1,0 +1,1134 @@
+<div id="vedant-coin-cart-embed-{{ block.id }}" class="vedant-coins-cart" data-vedant-coin-cart-embed hidden>
+  <div class="vedant-coins-cart__header">
+    <div class="vedant-coins-cart__icon" aria-hidden="true">🪙</div>
+    <div class="vedant-coins-cart__header-copy">
+      <p class="vedant-coins-cart__eyebrow">Vedant Rewards</p>
+      <h2>Use Your Coins</h2>
+      <p class="vedant-coins-cart__balance" data-vedant-coin-balance>Checking your balance...</p>
+    </div>
+    <button class="vedant-coins-cart__collapse" type="button" aria-label="Collapse coin options" aria-expanded="true">⌃</button>
+  </div>
+
+  <div class="vedant-coins-cart__options" data-vedant-coin-options>
+    <button class="vedant-coins-choice" type="button" data-vedant-choice="use" aria-pressed="false">
+      <span class="vedant-coins-choice__radio" aria-hidden="true"></span>
+      <span class="vedant-coins-choice__copy">
+        <strong>Use Coins</strong>
+        <small>Apply your available coins for an instant discount on this order.</small>
+      </span>
+      <span class="vedant-coins-choice__tag" data-vedant-use-label>Use Coins</span>
+    </button>
+
+    <button class="vedant-coins-choice" type="button" data-vedant-choice="save" aria-pressed="false">
+      <span class="vedant-coins-choice__radio" aria-hidden="true"></span>
+      <span class="vedant-coins-choice__copy">
+        <strong>Do not use Coins</strong>
+        <small>Keep your coins safe for a future purchase.</small>
+      </span>
+    </button>
+  </div>
+
+  <div class="vedant-coins-cart__status" data-vedant-coin-status hidden>
+    <span class="vedant-coins-cart__check" aria-hidden="true">✓</span>
+    <span class="vedant-coins-cart__status-copy">
+      <strong data-vedant-status-title></strong>
+      <small data-vedant-status-copy></small>
+    </span>
+    <strong class="vedant-coins-cart__discount" data-vedant-discount></strong>
+  </div>
+
+  <div class="vedant-coins-cart__empty" data-vedant-empty hidden>
+    <strong>You don't have any coins yet.</strong>
+    <span>Earn coins on eligible purchases and use them on your next order.</span>
+  </div>
+
+  <p class="vedant-coins-cart__message" data-vedant-coin-message role="status" hidden></p>
+</div>
+
+<style>
+  #vedant-coin-cart-embed-{{ block.id }} {
+    --vedant-pink: #f34f91;
+    --vedant-ink: #231b25;
+    --vedant-muted: #756b75;
+    --vedant-line: #f1d9e4;
+    --vedant-wash: #fff4f8;
+    --vedant-green: #168447;
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    margin: 18px auto;
+    padding: clamp(16px, 2.4vw, 22px);
+    overflow: hidden;
+    color: var(--vedant-ink);
+    border: 1px solid var(--vedant-line);
+    border-radius: 18px;
+    background: linear-gradient(135deg, #fff8fb 0%, #fff0f6 100%);
+    box-shadow: 0 12px 30px rgba(93, 34, 61, .08);
+    font-family: inherit;
+  }
+
+  #vedant-coin-cart-embed-{{ block.id }}[hidden] { display: none; }
+  #vedant-coin-cart-embed-{{ block.id }} * { box-sizing: border-box; }
+  #vedant-coin-cart-embed-{{ block.id }} h2,
+  #vedant-coin-cart-embed-{{ block.id }} p { margin: 0; }
+
+  #vedant-coin-cart-embed-{{ block.id }} .vedant-coins-cart__header {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 12px;
+  }
+
+  #vedant-coin-cart-embed-{{ block.id }} .vedant-coins-cart__header-copy {
+    display: grid;
+    gap: 3px;
+    min-width: 0;
+  }
+
+  #vedant-coin-cart-embed-{{ block.id }} .vedant-coins-cart__icon {
+    display: grid;
+    flex: 0 0 48px;
+    width: 48px;
+    height: 48px;
+    place-items: center;
+    border-radius: 15px;
+    background: #ffe3ee;
+    font-size: 27px;
+  }
+
+  #vedant-coin-cart-embed-{{ block.id }} .vedant-coins-cart__eyebrow {
+    color: var(--vedant-pink);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+  }
+
+  #vedant-coin-cart-embed-{{ block.id }} h2 {
+    margin-top: 2px;
+    font-size: clamp(20px, 3vw, 25px);
+    line-height: 1.1;
+    min-width: 0;
+  }
+
+  #vedant-coin-cart-embed-{{ block.id }} .vedant-coins-cart__balance {
+    margin-top: 5px;
+    color: var(--vedant-muted);
+    font-size: 13px;
+    min-width: 0;
+  }
+
+  #vedant-coin-cart-embed-{{ block.id }} .vedant-coins-cart__collapse {
+    justify-self: end;
+    align-self: start;
+    border: 0;
+    color: var(--vedant-muted);
+    background: transparent;
+    font-size: 25px;
+    line-height: 1;
+    cursor: pointer;
+  }
+
+  #vedant-coin-cart-embed-{{ block.id }} .vedant-coins-cart__options {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
+    align-items: stretch;
+    gap: 12px;
+    margin-top: 20px;
+  }
+
+  #vedant-coin-cart-embed-{{ block.id }} .vedant-coins-choice {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    width: 100%;
+    min-width: 0;
+    min-height: 82px;
+    padding: 15px;
+    border: 1px solid #eadfe5;
+    border-radius: 12px;
+    color: var(--vedant-ink);
+    background: rgba(255, 255, 255, .82);
+    text-align: left;
+    cursor: pointer;
+    transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease;
+  }
+
+  #vedant-coin-cart-embed-{{ block.id }} .vedant-coins-choice:hover { transform: translateY(-1px); }
+  #vedant-coin-cart-embed-{{ block.id }} .vedant-coins-choice[aria-pressed="true"] {
+    border-color: var(--vedant-pink);
+    box-shadow: 0 0 0 2px rgba(243, 79, 145, .12);
+    background: #fff;
+  }
+
+  #vedant-coin-cart-embed-{{ block.id }} .vedant-coins-choice:disabled {
+    cursor: not-allowed;
+    opacity: .55;
+    transform: none;
+  }
+
+  #vedant-coin-cart-embed-{{ block.id }} .vedant-coins-choice__radio {
+    flex: 0 0 18px;
+    width: 18px;
+    height: 18px;
+    margin-top: 1px;
+    border: 2px solid #cdbec7;
+    border-radius: 50%;
+  }
+
+  #vedant-coin-cart-embed-{{ block.id }} .vedant-coins-choice[aria-pressed="true"] .vedant-coins-choice__radio {
+    border: 5px solid var(--vedant-pink);
+  }
+
+  #vedant-coin-cart-embed-{{ block.id }} .vedant-coins-choice__copy {
+    display: grid;
+    gap: 5px;
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  #vedant-coin-cart-embed-{{ block.id }} .vedant-coins-choice strong { font-size: 14px; }
+  #vedant-coin-cart-embed-{{ block.id }} .vedant-coins-choice small {
+    color: var(--vedant-muted);
+    font-size: 12px;
+    line-height: 1.35;
+  }
+
+  #vedant-coin-cart-embed-{{ block.id }} .vedant-coins-choice__tag {
+    margin-left: auto;
+    color: var(--vedant-pink);
+    font-size: 11px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  #vedant-coin-cart-embed-{{ block.id }} .vedant-coins-cart__status {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px 12px;
+    margin-top: 14px;
+    padding: 13px 15px;
+    border-radius: 11px;
+    color: #126b3a;
+    background: #eaf8ef;
+  }
+
+  #vedant-coin-cart-embed-{{ block.id }} .vedant-coins-cart__status[hidden],
+  #vedant-coin-cart-embed-{{ block.id }} .vedant-coins-cart__empty[hidden],
+  #vedant-coin-cart-embed-{{ block.id }} .vedant-coins-cart__message[hidden] { display: none; }
+
+  #vedant-coin-cart-embed-{{ block.id }} .vedant-coins-cart__check {
+    display: grid;
+    flex: 0 0 23px;
+    width: 23px;
+    height: 23px;
+    place-items: center;
+    border-radius: 50%;
+    color: white;
+    background: #21a45f;
+    font-weight: 800;
+  }
+
+  #vedant-coin-cart-embed-{{ block.id }} .vedant-coins-cart__status-copy {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  #vedant-coin-cart-embed-{{ block.id }} .vedant-coins-cart__status small {
+    font-size: 12px;
+    overflow-wrap: anywhere;
+  }
+  #vedant-coin-cart-embed-{{ block.id }} .vedant-coins-cart__discount {
+    justify-self: end;
+    margin-left: 0;
+    white-space: nowrap;
+    font-size: 15px;
+  }
+
+  #vedant-coin-cart-embed-{{ block.id }} .vedant-coins-cart__empty {
+    display: grid;
+    gap: 4px;
+    margin-top: 15px;
+    padding: 14px 15px;
+    border-radius: 11px;
+    color: var(--vedant-muted);
+    background: rgba(255, 255, 255, .7);
+    font-size: 13px;
+    min-width: 0;
+  }
+
+  #vedant-coin-cart-embed-{{ block.id }} .vedant-coins-cart__empty strong { color: var(--vedant-ink); }
+  #vedant-coin-cart-embed-{{ block.id }} .vedant-coins-cart__message {
+    margin-top: 10px;
+    color: var(--vedant-muted);
+    font-size: 12px;
+    overflow-wrap: anywhere;
+  }
+
+  #vedant-coin-cart-embed-{{ block.id }} .vedant-coins-cart__message.is-error { color: #b42318; }
+
+  #vedant-coin-cart-embed-{{ block.id }}.is-collapsed .vedant-coins-cart__options,
+  #vedant-coin-cart-embed-{{ block.id }}.is-collapsed .vedant-coins-cart__status,
+  #vedant-coin-cart-embed-{{ block.id }}.is-collapsed .vedant-coins-cart__empty,
+  #vedant-coin-cart-embed-{{ block.id }}.is-collapsed .vedant-coins-cart__message { display: none; }
+
+  @media (max-width: 640px) {
+    #vedant-coin-cart-embed-{{ block.id }} {
+      margin: 14px auto;
+      padding: 16px;
+      border-radius: 15px;
+    }
+
+    #vedant-coin-cart-embed-{{ block.id }} .vedant-coins-cart__header {
+      gap: 10px;
+    }
+
+    #vedant-coin-cart-embed-{{ block.id }} .vedant-coins-cart__icon {
+      flex-basis: 42px;
+      width: 42px;
+      height: 42px;
+      font-size: 24px;
+    }
+
+    #vedant-coin-cart-embed-{{ block.id }} h2 {
+      font-size: clamp(19px, 5vw, 22px);
+    }
+
+    #vedant-coin-cart-embed-{{ block.id }} .vedant-coins-cart__balance {
+      font-size: 12px;
+    }
+
+    #vedant-coin-cart-embed-{{ block.id }} .vedant-coins-cart__options { grid-template-columns: 1fr; }
+    #vedant-coin-cart-embed-{{ block.id }} .vedant-coins-choice { min-height: 70px; }
+    #vedant-coin-cart-embed-{{ block.id }} .vedant-coins-choice__tag { display: none; }
+    #vedant-coin-cart-embed-{{ block.id }} .vedant-coins-cart__status {
+      gap: 8px 10px;
+      padding: 12px 13px;
+    }
+    #vedant-coin-cart-embed-{{ block.id }} .vedant-coins-cart__discount { font-size: 13px; }
+  }
+</style>
+
+<script>
+(function () {
+  const root = document.getElementById("vedant-coin-cart-embed-{{ block.id }}");
+  if (!root) return;
+  const controllerKey = "__vedantCoinCartController";
+  const previousController = window[controllerKey];
+  if (previousController?.root?.isConnected) return;
+  previousController?.destroy?.();
+  if (root.dataset.vedantCoinsInitialized === "true") return;
+  root.dataset.vedantCoinsInitialized = "true";
+
+  const balanceElement = root.querySelector("[data-vedant-coin-balance]");
+  const status = root.querySelector("[data-vedant-coin-status]");
+  const statusTitle = root.querySelector("[data-vedant-status-title]");
+  const statusCopy = root.querySelector("[data-vedant-status-copy]");
+  const discountElement = root.querySelector("[data-vedant-discount]");
+  const emptyState = root.querySelector("[data-vedant-empty]");
+  const messageElement = root.querySelector("[data-vedant-coin-message]");
+  const collapse = root.querySelector(".vedant-coins-cart__collapse");
+  const useChoice = root.querySelector('[data-vedant-choice="use"]');
+  const saveChoice = root.querySelector('[data-vedant-choice="save"]');
+  const options = root.querySelector("[data-vedant-coin-options]");
+  const coinAttribute = "_vedant_coin_discount";
+  const reservationAttribute = "_vedant_coin_reservation_id";
+  const fingerprintAttribute = "_vedant_coin_cart_fingerprint";
+  const reserveUrl = "/apps/coins/reserve";
+  const reservationStatusUrl = "/apps/coins/reserve/status";
+  const pendingCheckoutKey = "__vedantCoinPendingCheckout";
+  const cartContextSelectors = [
+    "cart-items",
+    "cart-form",
+    "form[action='/cart']",
+    ".cart-items",
+    ".cart__footer",
+    ".cart-drawer",
+    ".cart-drawer__footer",
+    ".cart__contents",
+    ".drawer__inner",
+  ];
+  const subtotalSelectors = [
+    ".cart__footer .cart__subtotal",
+    ".cart-drawer__footer .cart__subtotal",
+    ".cart__subtotal",
+    ".cart-subtotal",
+    "[data-cart-subtotal]",
+    ".totals__subtotal",
+    ".totals",
+  ];
+  const checkoutSelectors = [
+    ".cart__footer .cart__ctas button[name='checkout']",
+    ".cart-drawer__footer button[name='checkout']",
+    "button[name='checkout']",
+    "input[name='checkout']",
+    "a[href*='/checkout']",
+    ".cart__checkout-button",
+    ".cart-drawer__checkout-button",
+  ];
+  const blocksSelectors = [
+    ".cart__footer .cart__blocks",
+    ".cart-drawer__footer .cart__blocks",
+    ".cart__blocks",
+    ".cart__totals",
+    ".cart-drawer__totals",
+  ];
+  const footerSelectors = [
+    ".cart__footer",
+    ".cart-drawer__footer",
+    ".cart-footer",
+    ".drawer__footer",
+  ];
+  const containerSelectors = [
+    ".cart__contents",
+    ".cart-items",
+    ".cart-drawer",
+    ".drawer__inner",
+    "#MainContent",
+    "main",
+    ".page-width",
+  ];
+
+  let loading = false;
+  let availableCoins = null;
+  let refreshTimer;
+  let retryTimer;
+  let refreshPromise = null;
+  let initialStateLoaded = false;
+  let selection = "save";
+  let checkoutPromise = null;
+  let allowCheckoutOnce = false;
+  let emptyCartReconciledToken = null;
+  let cartMutationPending = false;
+
+  function showMessage(text, error) {
+    messageElement.textContent = text || "";
+    messageElement.hidden = !text;
+    messageElement.classList.toggle("is-error", Boolean(error));
+  }
+
+  function scheduleRefresh() {
+    clearTimeout(refreshTimer);
+    refreshTimer = setTimeout(refresh, 120);
+  }
+
+  function handleCartMutation() {
+    cartMutationPending = true;
+    scheduleRefresh();
+  }
+
+  function installCartFetchLifecycle() {
+    const lifecycleKey = "__vedantCartFetchLifecycle";
+    let lifecycle = window[lifecycleKey];
+
+    if (!lifecycle) {
+      const originalFetch = window.fetch;
+      const xhrPrototype = window.XMLHttpRequest && window.XMLHttpRequest.prototype;
+      const originalXhrOpen = xhrPrototype?.open;
+      const originalXhrSend = xhrPrototype?.send;
+      const callbacks = new Set();
+      const wrappedFetch = function (input, init) {
+        let pathname = "";
+        try {
+          const requestUrl = typeof input === "string" ? input : input?.url;
+          pathname = new URL(requestUrl, window.location.origin).pathname;
+        } catch {
+          pathname = "";
+        }
+
+        const isCartMutation = /^\/cart\/(add|change|clear|update)\.js$/.test(pathname);
+        const result = originalFetch.apply(this, arguments);
+
+        if (!isCartMutation) return result;
+
+        return result.then(function (response) {
+          if (response.ok) callbacks.forEach(function (callback) { callback(); });
+          return response;
+        });
+      };
+
+      const wrappedXhrOpen = xhrPrototype && function (method, url) {
+        try {
+          const pathname = new URL(url, window.location.origin).pathname;
+          this.__vedantCartMutation = /^\/cart\/(add|change|clear|update)\.js$/.test(pathname);
+        } catch {
+          this.__vedantCartMutation = false;
+        }
+        return originalXhrOpen.apply(this, arguments);
+      };
+
+      const wrappedXhrSend = xhrPrototype && function () {
+        if (this.__vedantCartMutation) {
+          this.addEventListener("loadend", function () {
+            if (this.status >= 200 && this.status < 300) {
+              callbacks.forEach(function (callback) { callback(); });
+            }
+          }, { once: true });
+        }
+        return originalXhrSend.apply(this, arguments);
+      };
+
+      lifecycle = {
+        originalFetch,
+        wrappedFetch,
+        callbacks,
+        xhrPrototype,
+        originalXhrOpen,
+        originalXhrSend,
+        wrappedXhrOpen,
+        wrappedXhrSend,
+      };
+      window.fetch = wrappedFetch;
+      if (xhrPrototype) {
+        xhrPrototype.open = wrappedXhrOpen;
+        xhrPrototype.send = wrappedXhrSend;
+      }
+      window[lifecycleKey] = lifecycle;
+    }
+
+    lifecycle.callbacks.add(handleCartMutation);
+
+    return function removeCartFetchLifecycle() {
+      lifecycle.callbacks.delete(handleCartMutation);
+      if (lifecycle.callbacks.size === 0 && window.fetch === lifecycle.wrappedFetch) {
+        window.fetch = lifecycle.originalFetch;
+        if (lifecycle.xhrPrototype && lifecycle.xhrPrototype.open === lifecycle.wrappedXhrOpen) {
+          lifecycle.xhrPrototype.open = lifecycle.originalXhrOpen;
+          lifecycle.xhrPrototype.send = lifecycle.originalXhrSend;
+        }
+        delete window[lifecycleKey];
+      }
+    };
+  }
+
+  function findFirst(scope, selectors) {
+    for (const selector of selectors) {
+      const node = scope.querySelector(selector);
+      if (node) return node;
+    }
+    return null;
+  }
+
+  async function getCart() {
+    const response = await fetch("/cart.js", {
+      credentials: "same-origin",
+      cache: "no-store",
+      headers: { Accept: "application/json" }
+    });
+    if (!response.ok) throw new Error("Unable to load cart");
+    return response.json();
+  }
+
+  async function updateAttribute(value, reservationId = null, cartFingerprint = null) {
+    const attributes = {
+      [coinAttribute]: value ? String(value) : "",
+    };
+    if (reservationId !== null) {
+      attributes[reservationAttribute] = reservationId ? String(reservationId) : "";
+    }
+    if (cartFingerprint !== null) {
+      attributes[fingerprintAttribute] = cartFingerprint ? String(cartFingerprint) : "";
+    }
+
+    const response = await fetch("/cart/update.js", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({ attributes })
+    });
+    if (!response.ok) throw new Error("Unable to update cart");
+    return response.json();
+  }
+
+  async function reserve(coins, cartToken, options = {}) {
+    const response = await fetch(reserveUrl, {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({
+        coins,
+        cartToken,
+        reservationId: options.reservationId || "",
+        cartFingerprint: options.cartFingerprint || "",
+        reconcile: options.reconcile === true,
+      })
+    });
+    const data = await response.json().catch(function () { return {}; });
+    if (!response.ok) throw new Error(data.error || "Unable to update coin reservation");
+    return data;
+  }
+
+  async function getReservationStatus(cartToken, reservationId = "") {
+    const params = new URLSearchParams({ cartToken });
+    if (reservationId) params.set("reservationId", reservationId);
+    const response = await fetch(
+      reservationStatusUrl + "?" + params.toString(),
+      {
+        credentials: "same-origin",
+        cache: "no-store",
+        headers: { Accept: "application/json" }
+      }
+    );
+    const data = await response.json().catch(function () { return {}; });
+    if (!response.ok) throw new Error(data.error || "Unable to load coin reservation status");
+    return data;
+  }
+
+  function readPendingCheckout() {
+    try {
+      const value = window.sessionStorage?.getItem(pendingCheckoutKey);
+      const pending = value ? JSON.parse(value) : null;
+      return pending?.cartToken ? pending : null;
+    } catch {
+      return null;
+    }
+  }
+
+  function rememberPendingCheckout(cartToken, reservationId, fingerprint) {
+    if (!cartToken) return;
+    try {
+      window.sessionStorage?.setItem(
+        pendingCheckoutKey,
+        JSON.stringify({
+          cartToken: String(cartToken),
+          reservationId: String(reservationId || ""),
+          fingerprint: String(fingerprint || ""),
+          createdAt: Date.now(),
+        })
+      );
+    } catch {
+      // Session storage can be unavailable in privacy-restricted browsers.
+    }
+  }
+
+  function clearPendingCheckout() {
+    try {
+      window.sessionStorage?.removeItem(pendingCheckoutKey);
+    } catch {
+      // Ignore storage cleanup failures; the reservation still expires server-side.
+    }
+  }
+
+  async function releaseReservationIfActive(cartToken, reservationId = "") {
+    if (!cartToken) return false;
+    const status = await getReservationStatus(cartToken, reservationId);
+    if (status.status !== "ACTIVE") return false;
+    const result = await reserve(0, cartToken, { reservationId });
+    return !result.duplicate;
+  }
+
+  async function releasePendingCheckoutReservation() {
+    const pending = readPendingCheckout();
+    if (!pending) return false;
+    await releaseReservationIfActive(
+      String(pending.cartToken),
+      String(pending.reservationId || ""),
+    );
+    clearPendingCheckout();
+    return true;
+  }
+
+  async function reconcilePendingCheckout(cart) {
+    const pending = readPendingCheckout();
+    if (!pending) return false;
+
+    await releaseReservationIfActive(
+      String(pending.cartToken),
+      String(pending.reservationId || ""),
+    );
+    clearPendingCheckout();
+
+    if (cartCoins(cart) > 0) {
+      await updateAttribute("", "", "");
+      return true;
+    }
+
+    return false;
+  }
+
+  function cartCoins(cart) {
+    const value = Math.floor(Number(cart?.attributes?.[coinAttribute] || 0));
+    return Number.isFinite(value) && value > 0 ? value : 0;
+  }
+
+  function eligibleCartValue(cart) {
+    const cents = Number(cart?.items_subtotal_price ?? cart?.total_price ?? 0);
+    return Number.isFinite(cents) && cents > 0 ? Math.floor(cents / 100) : 0;
+  }
+
+  function cartFingerprint(cart) {
+    const items = (Array.isArray(cart?.items) ? cart.items : [])
+      .map((item) => ({
+        key: String(item?.key || `${item?.product_id || ""}:${item?.variant_id || ""}`),
+        quantity: Math.max(0, Number(item?.quantity) || 0),
+        linePrice: Math.max(0, Number(item?.final_line_price ?? item?.line_price ?? 0) || 0),
+      }))
+      .sort((left, right) => left.key.localeCompare(right.key));
+
+    return JSON.stringify({
+      items,
+      eligibleValue: eligibleCartValue(cart),
+    });
+  }
+
+  async function reconcileCurrentCartReservation(cart) {
+    const reservationId = String(cart?.attributes?.[reservationAttribute] || "");
+    if (!reservationId || !cart?.token) return false;
+
+    const result = await reserve(0, String(cart.token), {
+      reservationId,
+      cartFingerprint: cartFingerprint(cart),
+      reconcile: true,
+    });
+
+    if (result.status === "NONE" || result.released) {
+      await updateAttribute("", "", "");
+      return true;
+    }
+
+    return false;
+  }
+
+  function cartReservationStateChanged(cart) {
+    const reservationId = String(cart?.attributes?.[reservationAttribute] || "");
+    const storedFingerprint = String(cart?.attributes?.[fingerprintAttribute] || "");
+    return Boolean(
+      reservationId &&
+      storedFingerprint &&
+      storedFingerprint !== cartFingerprint(cart),
+    );
+  }
+
+  async function getAvailableCoins() {
+    const response = await fetch("/apps/coins", {
+      credentials: "same-origin",
+      cache: "no-store",
+      headers: { Accept: "application/json" }
+    });
+    if (!response.ok) throw new Error("Unable to load coin balance");
+    const data = await response.json();
+    const value = Number(data?.availableCoins);
+    if (!Number.isFinite(value) || value < 0) throw new Error("Invalid coin balance");
+    return Math.floor(value);
+  }
+
+  function setChoice(choice) {
+    useChoice.setAttribute("aria-pressed", choice === "use" ? "true" : "false");
+    saveChoice.setAttribute("aria-pressed", choice === "save" ? "true" : "false");
+  }
+
+  function mountToCartSummary() {
+    const isCartPage =
+      window.location.pathname.replace(/\/$/, "").endsWith("/cart") ||
+      Boolean(document.querySelector(cartContextSelectors.join(", ")));
+
+    if (!isCartPage) return false;
+
+    const blocks = findFirst(document, blocksSelectors);
+    if (blocks?.parentElement) {
+      if (root.parentElement !== blocks.parentElement || root.nextElementSibling !== blocks) {
+        blocks.parentElement.insertBefore(root, blocks);
+      }
+      return true;
+    }
+
+    const footer = findFirst(document, footerSelectors);
+    if (footer) {
+      if (!footer.contains(root)) footer.prepend(root);
+      return true;
+    }
+
+    const checkout = findFirst(document, checkoutSelectors);
+    if (checkout?.parentElement) {
+      if (root.parentElement !== checkout.parentElement || root.nextElementSibling !== checkout) {
+        checkout.parentElement.insertBefore(root, checkout);
+      }
+      return true;
+    }
+
+    const subtotal = findFirst(document, subtotalSelectors);
+    if (subtotal?.parentElement) {
+      if (root.parentElement !== subtotal.parentElement || root.nextElementSibling !== subtotal) {
+        subtotal.parentElement.insertBefore(root, subtotal);
+      }
+      return true;
+    }
+
+    const cartForm = findFirst(document, ["form[action='/cart']", "cart-form"]);
+    if (cartForm) {
+      if (!cartForm.contains(root)) cartForm.prepend(root);
+      return true;
+    }
+
+    const cartContainer = findFirst(document, containerSelectors);
+    if (cartContainer) {
+      if (!cartContainer.contains(root)) cartContainer.prepend(root);
+      return true;
+    }
+
+    document.body.prepend(root);
+    return true;
+  }
+
+  function showApplied(coins) {
+    setChoice("use");
+    status.hidden = false;
+    statusTitle.textContent = coins + " coins will be applied";
+    statusCopy.textContent = "You'll get ₹" + coins.toFixed(2) + " off on this order.";
+    discountElement.textContent = "- ₹" + coins.toFixed(2);
+  }
+
+  function showSaved() {
+    setChoice("save");
+    status.hidden = false;
+    statusTitle.textContent = "Coins saved for later";
+    statusCopy.textContent = "Your coins will stay available for a future purchase.";
+    discountElement.textContent = "";
+  }
+
+  async function refreshNow() {
+    const mounted = mountToCartSummary();
+    if (!mounted) {
+      root.hidden = true;
+      return;
+    }
+
+    root.hidden = false;
+
+    const [balanceResult, cartResult] = await Promise.allSettled([
+      availableCoins === null ? getAvailableCoins() : Promise.resolve(availableCoins),
+      getCart(),
+    ]);
+
+    if (balanceResult.status === "fulfilled") {
+      availableCoins = balanceResult.value;
+    }
+
+    if (cartResult.status !== "fulfilled") {
+      balanceElement.textContent = availableCoins === null
+        ? "Balance unavailable. Retrying..."
+        : availableCoins > 0
+          ? "You have " + availableCoins + " coins available"
+          : "You have 0 coins available";
+      emptyState.hidden = availableCoins === null || availableCoins > 0;
+      options.hidden = false;
+      useChoice.disabled = availableCoins === null || availableCoins <= 0;
+      status.hidden = true;
+      setChoice(null);
+      showMessage("We could not load your cart right now. Please try again.", true);
+      clearTimeout(retryTimer);
+      retryTimer = setTimeout(refresh, 5000);
+      return;
+    }
+
+    const cart = cartResult.value;
+    const shouldReconcileCart = cartMutationPending;
+    cartMutationPending = false;
+    let currentDiscount = cartCoins(cart);
+    const eligibleValue = eligibleCartValue(cart);
+    const cartIsEmpty = Number(cart.item_count) === 0;
+
+    if (readPendingCheckout()) {
+      try {
+        if (await reconcilePendingCheckout(cart)) {
+          currentDiscount = 0;
+        }
+        availableCoins = await getAvailableCoins();
+      } catch (error) {
+        showMessage(error.message || "Unable to reconcile checkout coins. Retrying...", true);
+        clearTimeout(retryTimer);
+        retryTimer = setTimeout(refresh, 5000);
+        return;
+      }
+    }
+
+    if (shouldReconcileCart || cartReservationStateChanged(cart)) {
+      try {
+        if (await reconcileCurrentCartReservation(cart)) {
+          currentDiscount = 0;
+          availableCoins = await getAvailableCoins();
+        }
+      } catch (error) {
+        cartMutationPending = true;
+        showMessage(error.message || "Unable to reconcile cart coins. Retrying...", true);
+        clearTimeout(retryTimer);
+        retryTimer = setTimeout(refresh, 5000);
+        return;
+      }
+    }
+
+    if (currentDiscount > 0) selection = "use";
+
+    if (cartIsEmpty && emptyCartReconciledToken !== String(cart.token || "")) {
+      try {
+        if (currentDiscount > 0) {
+          await updateAttribute("", "", "");
+          currentDiscount = 0;
+          selection = "save";
+        }
+        emptyCartReconciledToken = String(cart.token || "");
+        document.dispatchEvent(new CustomEvent("cart:updated"));
+      } catch (error) {
+        showMessage(error.message || "Unable to release empty-cart coins. Retrying...", true);
+        clearTimeout(retryTimer);
+        retryTimer = setTimeout(refresh, 5000);
+      }
+    }
+
+    initialStateLoaded = true;
+    balanceElement.textContent = availableCoins === null
+      ? "Balance unavailable. Retrying..."
+      : availableCoins > 0
+        ? "You have " + availableCoins + " coins available"
+        : "You have 0 coins available";
+    emptyState.hidden = availableCoins === null || availableCoins > 0;
+    options.hidden = false;
+    useChoice.disabled = availableCoins === null || availableCoins <= 0 || eligibleValue <= 0;
+
+    if (selection === "use" && currentDiscount > 0) {
+      showApplied(currentDiscount);
+    } else {
+      status.hidden = true;
+      setChoice("save");
+    }
+
+    showMessage("");
+  }
+
+  async function refresh() {
+    if (refreshPromise) return refreshPromise;
+    refreshPromise = refreshNow();
+    try {
+      return await refreshPromise;
+    } finally {
+      refreshPromise = null;
+    }
+  }
+
+  async function applyCoins() {
+    if (loading) return;
+    loading = true;
+    showMessage("Applying your coins to this cart...");
+    try {
+      const cart = await getCart();
+      const usableCoins = Math.min(availableCoins || 0, eligibleCartValue(cart));
+      if (usableCoins <= 0) throw new Error("Coins cannot be used on this cart");
+      selection = "use";
+      await updateAttribute(usableCoins);
+      showMessage(usableCoins + " coins applied successfully.");
+      showApplied(usableCoins);
+    } catch (error) {
+      showMessage(error.message || "Unable to apply coins.", true);
+      await refresh();
+    } finally {
+      loading = false;
+    }
+  }
+
+  async function saveCoins() {
+    if (loading) return;
+    loading = true;
+    showMessage("Saving your coins...");
+    try {
+      selection = "save";
+      await releasePendingCheckoutReservation();
+      await updateAttribute("", "", "");
+      showSaved();
+      showMessage("Coins saved for a future purchase.");
+    } catch (error) {
+      showMessage(error.message || "Unable to remove coins.", true);
+      await refresh();
+    } finally {
+      loading = false;
+    }
+  }
+
+  function isCheckoutTarget(element) {
+    return Boolean(element?.matches?.([
+      "button[name='checkout']",
+      "input[name='checkout']",
+      "a[href*='/checkout']",
+      ".cart__checkout-button",
+      ".cart-drawer__checkout-button",
+    ].join(", ")));
+  }
+
+  function continueCheckout() {
+    allowCheckoutOnce = true;
+
+    const checkoutForm = document.getElementById("cart");
+    const checkoutButton = document.querySelector(
+      "button[name='checkout'], input[name='checkout']"
+    );
+
+    if (checkoutForm && typeof checkoutForm.requestSubmit === "function") {
+      if (checkoutButton && checkoutButton.form === checkoutForm) {
+        checkoutForm.requestSubmit(checkoutButton);
+      } else {
+        checkoutForm.requestSubmit();
+      }
+      return;
+    }
+
+    if (checkoutButton) {
+      checkoutButton.click();
+      return;
+    }
+
+    throw new Error("Checkout button is no longer available.");
+  }
+
+  async function reserveAtCheckout(target, form) {
+    if (checkoutPromise) return checkoutPromise;
+
+    checkoutPromise = (async function () {
+      showMessage("Securing your coins before checkout...");
+
+      const [balance, cart] = await Promise.all([
+        getAvailableCoins(),
+        getCart(),
+      ]);
+      if (selection !== "use") {
+        continueCheckout();
+        return;
+      }
+
+      const eligibleValue = eligibleCartValue(cart);
+      const currentDiscount = cartCoins(cart);
+      const requestedCoins = currentDiscount > 0
+        ? Math.min(currentDiscount, eligibleValue)
+        : Math.min(balance, eligibleValue);
+      const fingerprint = cartFingerprint(cart);
+
+      if (!Number.isFinite(requestedCoins) || requestedCoins <= 0) {
+        throw new Error("There are no usable coins for this cart.");
+      }
+
+      const result = await reserve(requestedCoins, cart.token, {
+        cartFingerprint: fingerprint,
+      });
+      try {
+        await updateAttribute(requestedCoins, result.reservationId, fingerprint);
+      } catch (error) {
+        await reserve(0, cart.token, {
+          reservationId: result.reservationId,
+        }).catch(function () {});
+        clearPendingCheckout();
+        throw error;
+      }
+
+      rememberPendingCheckout(cart.token, result.reservationId, fingerprint);
+      availableCoins = Math.max(0, balance - requestedCoins);
+      showApplied(requestedCoins);
+      document.dispatchEvent(new CustomEvent("cart:updated"));
+      continueCheckout();
+      return result;
+    })();
+
+    try {
+      return await checkoutPromise;
+    } catch (error) {
+      allowCheckoutOnce = false;
+      showMessage(error.message || "Your coins could not be reserved. Please refresh and try again.", true);
+      availableCoins = null;
+      await refresh();
+      throw error;
+    } finally {
+      checkoutPromise = null;
+    }
+  }
+
+  function handleCheckoutClick(event) {
+    if (allowCheckoutOnce) {
+      allowCheckoutOnce = false;
+      return;
+    }
+
+    const target = event.target.closest?.([
+      "button[name='checkout']",
+      "input[name='checkout']",
+      "a[href*='/checkout']",
+      ".cart__checkout-button",
+      ".cart-drawer__checkout-button",
+    ].join(", "));
+
+    if (!target || selection !== "use") return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    reserveAtCheckout(target, target.closest("form")).catch(function (error) {
+      console.error("[coin-checkout] failed", error);
+    });
+  }
+
+  function handleCheckoutSubmit(event) {
+    if (allowCheckoutOnce) {
+      allowCheckoutOnce = false;
+      return;
+    }
+
+    const submitter = event.submitter || event.target.querySelector("button[name='checkout'], input[name='checkout']");
+    if (selection !== "use" || !isCheckoutTarget(submitter)) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    reserveAtCheckout(submitter, event.target).catch(function () {});
+  }
+
+  function handleCartUpdated() {
+    scheduleRefresh();
+  }
+
+  function handleCartChange() {
+    handleCartMutation();
+  }
+
+  function handleSectionChange() {
+    scheduleRefresh();
+  }
+
+  if (collapse) {
+    collapse.addEventListener("click", function () {
+      const collapsed = root.classList.toggle("is-collapsed");
+      collapse.setAttribute("aria-expanded", collapsed ? "false" : "true");
+      collapse.textContent = collapsed ? "⌄" : "⌃";
+    });
+  }
+
+  useChoice.addEventListener("click", applyCoins);
+  saveChoice.addEventListener("click", saveCoins);
+  document.addEventListener("click", handleCheckoutClick, true);
+  document.addEventListener("submit", handleCheckoutSubmit, true);
+  document.addEventListener("cart:updated", handleCartUpdated);
+  document.addEventListener("cart:change", handleCartChange);
+  document.addEventListener("shopify:section:load", handleSectionChange);
+  document.addEventListener("shopify:section:reorder", handleSectionChange);
+  const removeCartFetchLifecycle = installCartFetchLifecycle();
+  window[controllerKey] = {
+    root,
+    destroy() {
+      clearTimeout(refreshTimer);
+      clearTimeout(retryTimer);
+      document.removeEventListener("click", handleCheckoutClick, true);
+      document.removeEventListener("submit", handleCheckoutSubmit, true);
+      document.removeEventListener("cart:updated", handleCartUpdated);
+      document.removeEventListener("cart:change", handleCartChange);
+      document.removeEventListener("shopify:section:load", handleSectionChange);
+      document.removeEventListener("shopify:section:reorder", handleSectionChange);
+      removeCartFetchLifecycle();
+    },
+  };
+
+  refresh();
+})();
+</script>
+
+{% schema %}
+{
+  "name": "Vedant Coins Cart",
+  "target": "body",
+  "settings": []
+}
+{% endschema %}

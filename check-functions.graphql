@@ -1,0 +1,13 @@
+query {
+  shopifyFunctions(first: 50) {
+    nodes {
+      id
+      title
+      apiType
+      app {
+        id
+        title
+      }
+    }
+  }
+}
