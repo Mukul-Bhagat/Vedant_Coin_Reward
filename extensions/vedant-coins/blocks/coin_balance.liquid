@@ -197,10 +197,24 @@
       position: fixed;
       top: 54px;
       right: 12px;
-      width: min(300px, calc(100vw - 24px));
+      width: min(320px, calc(100vw - 24px));
+      max-width: 320px;
+      box-sizing: border-box;
       max-height: calc(100vh - 72px);
       overflow-y: auto;
       -webkit-overflow-scrolling: touch;
+    }
+
+    #vedant-header-coins-{{ block.id }} .vedant-header-coins__popup,
+    #vedant-header-coins-{{ block.id }} .vedant-header-coins__popup b,
+    #vedant-header-coins-{{ block.id }} .vedant-header-coins__popup p,
+    #vedant-header-coins-{{ block.id }} .vedant-header-coins__popup ol,
+    #vedant-header-coins-{{ block.id }} .vedant-header-coins__popup li,
+    #vedant-header-coins-{{ block.id }} .vedant-header-coins__popup small {
+      min-width: 0;
+      white-space: normal;
+      overflow-wrap: break-word;
+      word-break: normal;
     }
   }
 </style>
