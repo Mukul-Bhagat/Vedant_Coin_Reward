@@ -344,6 +344,7 @@
   const cartContextSelectors = [
     "cart-items",
     "cart-form",
+    "cart-drawer",
     "form[action='/cart']",
     ".cart-items",
     ".cart__footer",
@@ -351,7 +352,9 @@
     ".cart-drawer__footer",
     ".cart__contents",
     ".drawer__inner",
+    "[data-cart-drawer]",
   ];
+  const cartContextSelector = cartContextSelectors.join(", ");
   const subtotalSelectors = [
     ".cart__footer .cart__subtotal",
     ".cart-drawer__footer .cart__subtotal",
@@ -404,6 +407,9 @@
   let allowCheckoutOnce = false;
   let emptyCartReconciledToken = null;
   let cartMutationPending = false;
+  let cartDomObserver;
+  let retryAttempt = 0;
+  const retryDelays = [1000, 2000, 4000, 8000];
 
   function showMessage(text, error) {
     messageElement.textContent = text || "";
@@ -411,14 +417,39 @@
     messageElement.classList.toggle("is-error", Boolean(error));
   }
 
-  function scheduleRefresh() {
+  function scheduleRefresh(options = {}) {
+    if (options.resetRetries) {
+      retryAttempt = 0;
+      clearTimeout(retryTimer);
+      retryTimer = null;
+    }
     clearTimeout(refreshTimer);
     refreshTimer = setTimeout(refresh, 120);
   }
 
+  function scheduleRetry() {
+    clearTimeout(retryTimer);
+    retryTimer = null;
+    if (retryAttempt >= retryDelays.length) return false;
+
+    const delay = retryDelays[retryAttempt];
+    retryAttempt += 1;
+    retryTimer = setTimeout(function () {
+      retryTimer = null;
+      refresh();
+    }, delay);
+    return true;
+  }
+
+  function clearRetrySchedule() {
+    retryAttempt = 0;
+    clearTimeout(retryTimer);
+    retryTimer = null;
+  }
+
   function handleCartMutation() {
     cartMutationPending = true;
-    scheduleRefresh();
+    scheduleRefresh({ resetRetries: true });
   }
 
   function installCartFetchLifecycle() {
@@ -511,6 +542,68 @@
       if (node) return node;
     }
     return null;
+  }
+
+  function elementForNode(node) {
+    if (node?.nodeType === 1) return node;
+    return node?.parentElement || null;
+  }
+
+  function isCartContextElement(element) {
+    return Boolean(
+      element?.matches?.(cartContextSelector) ||
+      element?.closest?.(cartContextSelector)
+    );
+  }
+
+  function nodeContainsCartContext(node) {
+    const element = elementForNode(node);
+    return Boolean(
+      element &&
+      (isCartContextElement(element) || element.querySelector?.(cartContextSelector))
+    );
+  }
+
+  function isCartDomMutation(record) {
+    if (record.type === "attributes") {
+      const target = elementForNode(record.target);
+      return Boolean(target && !root.contains(target) && isCartContextElement(target));
+    }
+
+    if (record.type !== "childList" || root.contains(record.target)) return false;
+
+    const target = elementForNode(record.target);
+    if (target && isCartContextElement(target)) return true;
+
+    return [...record.addedNodes, ...record.removedNodes].some(function (node) {
+      if (node === root || root.contains(node)) return false;
+      return nodeContainsCartContext(node);
+    });
+  }
+
+  function installCartDomObserver() {
+    const observationTarget = document.body || document.documentElement;
+    if (!observationTarget || typeof MutationObserver === "undefined") {
+      return function () {};
+    }
+
+    const observer = new MutationObserver(function (records) {
+      if (!records.some(isCartDomMutation)) return;
+      scheduleRefresh({ resetRetries: true });
+    });
+
+    observer.observe(observationTarget, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["aria-hidden", "class", "hidden", "open"],
+    });
+
+    cartDomObserver = observer;
+    return function removeCartDomObserver() {
+      observer.disconnect();
+      if (cartDomObserver === observer) cartDomObserver = null;
+    };
   }
 
   async function getCart() {
@@ -724,7 +817,7 @@
   function mountToCartSummary() {
     const isCartPage =
       window.location.pathname.replace(/\/$/, "").endsWith("/cart") ||
-      Boolean(document.querySelector(cartContextSelectors.join(", ")));
+      Boolean(document.querySelector(cartContextSelector));
 
     if (!isCartPage) return false;
 
@@ -804,13 +897,18 @@
       getCart(),
     ]);
 
-    if (balanceResult.status === "fulfilled") {
+    let balanceFailed = balanceResult.status !== "fulfilled";
+    if (!balanceFailed) {
       availableCoins = balanceResult.value;
+      clearRetrySchedule();
     }
 
     if (cartResult.status !== "fulfilled") {
+      const retryScheduled = scheduleRetry();
       balanceElement.textContent = availableCoins === null
-        ? "Balance unavailable. Retrying..."
+        ? retryScheduled
+          ? "Balance unavailable. Retrying..."
+          : "Balance unavailable. Please try again shortly."
         : availableCoins > 0
           ? "You have " + availableCoins + " coins available"
           : "You have 0 coins available";
@@ -820,8 +918,6 @@
       status.hidden = true;
       setChoice(null);
       showMessage("We could not load your cart right now. Please try again.", true);
-      clearTimeout(retryTimer);
-      retryTimer = setTimeout(refresh, 5000);
       return;
     }
 
@@ -838,10 +934,11 @@
           currentDiscount = 0;
         }
         availableCoins = await getAvailableCoins();
+        balanceFailed = false;
+        clearRetrySchedule();
       } catch (error) {
         showMessage(error.message || "Unable to reconcile checkout coins. Retrying...", true);
-        clearTimeout(retryTimer);
-        retryTimer = setTimeout(refresh, 5000);
+        scheduleRetry();
         return;
       }
     }
@@ -851,12 +948,13 @@
         if (await reconcileCurrentCartReservation(cart)) {
           currentDiscount = 0;
           availableCoins = await getAvailableCoins();
+          balanceFailed = false;
+          clearRetrySchedule();
         }
       } catch (error) {
         cartMutationPending = true;
         showMessage(error.message || "Unable to reconcile cart coins. Retrying...", true);
-        clearTimeout(retryTimer);
-        retryTimer = setTimeout(refresh, 5000);
+        scheduleRetry();
         return;
       }
     }
@@ -874,8 +972,7 @@
         document.dispatchEvent(new CustomEvent("cart:updated"));
       } catch (error) {
         showMessage(error.message || "Unable to release empty-cart coins. Retrying...", true);
-        clearTimeout(retryTimer);
-        retryTimer = setTimeout(refresh, 5000);
+        scheduleRetry();
       }
     }
 
@@ -896,7 +993,17 @@
       setChoice("save");
     }
 
-    showMessage("");
+    if (balanceFailed) {
+      const retryScheduled = scheduleRetry();
+      showMessage(
+        retryScheduled
+          ? "We are still checking your balance. Retrying..."
+          : "We could not load your balance. Please try again shortly.",
+        !retryScheduled,
+      );
+    } else {
+      showMessage("");
+    }
   }
 
   async function refresh() {
@@ -1078,7 +1185,7 @@
   }
 
   function handleCartUpdated() {
-    scheduleRefresh();
+    scheduleRefresh({ resetRetries: true });
   }
 
   function handleCartChange() {
@@ -1086,7 +1193,7 @@
   }
 
   function handleSectionChange() {
-    scheduleRefresh();
+    scheduleRefresh({ resetRetries: true });
   }
 
   if (collapse) {
@@ -1103,8 +1210,17 @@
   document.addEventListener("submit", handleCheckoutSubmit, true);
   document.addEventListener("cart:updated", handleCartUpdated);
   document.addEventListener("cart:change", handleCartChange);
+  document.addEventListener("cart:add", handleCartUpdated);
+  document.addEventListener("cart:update", handleCartUpdated);
+  document.addEventListener("cart:remove", handleCartUpdated);
+  document.addEventListener("cart:refresh", handleCartUpdated);
+  document.addEventListener("cart:open", handleCartUpdated);
+  document.addEventListener("cart:drawer:open", handleCartUpdated);
+  document.addEventListener("drawer:open", handleCartUpdated);
   document.addEventListener("shopify:section:load", handleSectionChange);
   document.addEventListener("shopify:section:reorder", handleSectionChange);
+  document.addEventListener("shopify:section:unload", handleSectionChange);
+  const removeCartDomObserver = installCartDomObserver();
   const removeCartFetchLifecycle = installCartFetchLifecycle();
   window[controllerKey] = {
     root,
@@ -1115,8 +1231,17 @@
       document.removeEventListener("submit", handleCheckoutSubmit, true);
       document.removeEventListener("cart:updated", handleCartUpdated);
       document.removeEventListener("cart:change", handleCartChange);
+      document.removeEventListener("cart:add", handleCartUpdated);
+      document.removeEventListener("cart:update", handleCartUpdated);
+      document.removeEventListener("cart:remove", handleCartUpdated);
+      document.removeEventListener("cart:refresh", handleCartUpdated);
+      document.removeEventListener("cart:open", handleCartUpdated);
+      document.removeEventListener("cart:drawer:open", handleCartUpdated);
+      document.removeEventListener("drawer:open", handleCartUpdated);
       document.removeEventListener("shopify:section:load", handleSectionChange);
       document.removeEventListener("shopify:section:reorder", handleSectionChange);
+      document.removeEventListener("shopify:section:unload", handleSectionChange);
+      removeCartDomObserver();
       removeCartFetchLifecycle();
     },
   };
