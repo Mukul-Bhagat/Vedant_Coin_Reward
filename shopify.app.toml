@@ -1,7 +1,7 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
 client_id = "f3e916cb5eae59b63a2ba87619664471"
-application_url = "https://example.com"
+application_url = "https://vedant-coin-reward.onrender.com"
 embedded = true
 name = "Vedant Image Mapper"
 

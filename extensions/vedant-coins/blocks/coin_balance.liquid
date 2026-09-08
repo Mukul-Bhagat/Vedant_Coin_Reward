@@ -22,6 +22,8 @@
       <li>Choose “Use Coins” on the cart page.</li>
       <li>Your coins apply automatically up to the eligible cart value.</li>
       <li>1 coin = ₹1 discount.</li>
+      <li>If a coin use is interrupted or does not go through, don't worry - your reserved coins will be automatically returned within 10 minutes.</li>
+      <li>If you have any issue with your coins or need help, please contact us.</li>
     </ol>
     <small>Coins earned from your current purchase can be used on your next purchase.</small>
   </div>
@@ -166,6 +168,9 @@
       top: 54px;
       right: 12px;
       width: min(300px, calc(100vw - 24px));
+      max-height: calc(100vh - 72px);
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
     }
   }
 </style>
