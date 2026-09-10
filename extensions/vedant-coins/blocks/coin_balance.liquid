@@ -6,26 +6,46 @@
     aria-controls="vedant-header-coins-popup-{{ block.id }}"
     aria-label="View your Vedant coin balance"
   >
-    <span class="vedant-header-coins__icon" aria-hidden="true">🪙</span>
+    <svg class="vedant-header-coins__icon" viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+      <circle cx="16" cy="16" r="15" fill="#ffc526" />
+      <circle cx="16" cy="16" r="11.5" fill="none" stroke="#f39a14" stroke-width="1.8" />
+      <path d="M16 7.4 23 11v1.8H9V11l7-3.6Zm-5.1 6.9h2.2v7.4h-2.2v-7.4Zm4 0h2.2v7.4h-2.2v-7.4Zm4 0h2.2v7.4h-2.2v-7.4ZM8.8 23h14.4v2H8.8v-2Z" fill="#fff7cf" />
+    </svg>
     <span class="vedant-header-coins__label">
       <span class="vedant-header-coins__amount" data-vedant-header-total>...</span>
       <span class="vedant-header-coins__unit">Coins</span>
     </span>
   </button>
-  <div id="vedant-header-coins-popup-{{ block.id }}" class="vedant-header-coins__popup" hidden>
-    <div class="vedant-header-coins__popup-icon" aria-hidden="true">🪙</div>
-    <strong>Your Coins</strong>
-    <b data-vedant-header-popup-total>Balance unavailable</b>
-    <p>How to use coins?</p>
+  <div
+    id="vedant-header-coins-popup-{{ block.id }}"
+    class="vedant-header-coins__popup"
+    role="dialog"
+    aria-label="Your coin balance"
+    hidden
+  >
+    <div class="vedant-header-coins__popup-header">
+      <svg class="vedant-header-coins__popup-icon" viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+        <circle cx="16" cy="16" r="15" fill="#ffc526" />
+        <circle cx="16" cy="16" r="11.5" fill="none" stroke="#f39a14" stroke-width="1.8" />
+        <path d="M16 7.4 23 11v1.8H9V11l7-3.6Zm-5.1 6.9h2.2v7.4h-2.2v-7.4Zm4 0h2.2v7.4h-2.2v-7.4Zm4 0h2.2v7.4h-2.2v-7.4ZM8.8 23h14.4v2H8.8v-2Z" fill="#fff7cf" />
+      </svg>
+      <div class="vedant-header-coins__popup-balance">
+        <strong>Your Coins</strong>
+        <b data-vedant-header-popup-total>Balance unavailable</b>
+      </div>
+      <button class="vedant-header-coins__close" type="button" aria-label="Close coin balance">
+        <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="m5 5 10 10M15 5 5 15" /></svg>
+      </button>
+    </div>
+    <p class="vedant-header-coins__intro">Use your coins to get discounts on your purchase. Earn more coins with every order!</p>
+    <div class="vedant-header-coins__divider"></div>
+    <p class="vedant-header-coins__how-to">How to use coins?</p>
     <ol>
       <li>Add products to your cart.</li>
-      <li>Choose “Use Coins” on the cart page.</li>
-      <li>Your coins apply automatically up to the eligible cart value.</li>
-      <li>1 coin = ₹1 discount.</li>
-      <li>If a coin use is interrupted or does not go through, don't worry - your reserved coins will be automatically returned within 10 minutes.</li>
-      <li>If you have any issue with your coins or need help, please contact us.</li>
+      <li>Choose "Use Coins" on the cart page.</li>
+      <li>Your coins are automatically applied up to the available balance.</li>
     </ol>
-    <small>Coins earned from your current purchase can be used on your next purchase.</small>
+    <a class="vedant-header-coins__view" href="/account">View My Coins</a>
   </div>
 </div>
 
@@ -217,6 +237,210 @@
       word-break: normal;
     }
   }
+  /* Updated compact header icon and fully visible balance card. */
+  #vedant-header-coins-{{ block.id }} {
+    --vedant-pink: #f83c86;
+    --vedant-ink: #211d2b;
+    overflow: visible;
+  }
+
+  #vedant-header-coins-{{ block.id }} .vedant-header-coins__trigger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    min-height: 0;
+    min-width: 0;
+    padding: 3px;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+  }
+
+  #vedant-header-coins-{{ block.id }} .vedant-header-coins__trigger:focus-visible,
+  #vedant-header-coins-{{ block.id }} .vedant-header-coins__close:focus-visible,
+  #vedant-header-coins-{{ block.id }} .vedant-header-coins__view:focus-visible {
+    outline: 2px solid var(--vedant-pink);
+    outline-offset: 3px;
+  }
+
+  #vedant-header-coins-{{ block.id }} .vedant-header-coins__icon {
+    width: 31px;
+    height: 31px;
+    flex: 0 0 auto;
+  }
+
+  /* Keep the header clear: the balance is shown only after the icon is clicked. */
+  #vedant-header-coins-{{ block.id }} .vedant-header-coins__label {
+    display: none;
+  }
+
+  #vedant-header-coins-{{ block.id }} .vedant-header-coins__popup {
+    width: 360px;
+    max-width: calc(100vw - 32px);
+    padding: 22px;
+    border: 0;
+    border-radius: 15px;
+    box-sizing: border-box;
+    overflow: hidden;
+    box-shadow: 0 12px 30px rgba(45, 27, 38, 0.18);
+    font-size: 15px;
+    z-index: 1000;
+  }
+
+  #vedant-header-coins-{{ block.id }} .vedant-header-coins__popup-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  #vedant-header-coins-{{ block.id }} .vedant-header-coins__popup-icon {
+    width: 60px;
+    height: 60px;
+    flex: 0 0 auto;
+    float: none;
+    margin: 0;
+  }
+
+  #vedant-header-coins-{{ block.id }} .vedant-header-coins__popup-balance {
+    min-width: 0;
+  }
+
+  #vedant-header-coins-{{ block.id }} .vedant-header-coins__popup strong {
+    display: block;
+    font-size: 16px;
+    line-height: 1.2;
+  }
+
+  #vedant-header-coins-{{ block.id }} .vedant-header-coins__popup b {
+    margin-top: 3px;
+    color: var(--vedant-pink);
+    font-size: 30px;
+    line-height: 1.05;
+  }
+
+  #vedant-header-coins-{{ block.id }} .vedant-header-coins__close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    margin-left: auto;
+    padding: 4px;
+    border: 0;
+    color: var(--vedant-ink);
+    background: transparent;
+    cursor: pointer;
+  }
+
+  #vedant-header-coins-{{ block.id }} .vedant-header-coins__close svg {
+    width: 22px;
+    height: 22px;
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-width: 1.8;
+  }
+
+  #vedant-header-coins-{{ block.id }} .vedant-header-coins__intro {
+    clear: none;
+    margin: 20px 0 16px;
+    padding: 14px 16px;
+    border-radius: 11px;
+    background: #fff3f8;
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 1.5;
+  }
+
+  #vedant-header-coins-{{ block.id }} .vedant-header-coins__divider {
+    height: 1px;
+    margin: 0 0 15px;
+    background: #eee8ec;
+  }
+
+  #vedant-header-coins-{{ block.id }} .vedant-header-coins__how-to {
+    clear: none;
+    margin: 0 0 12px;
+    font-size: 17px;
+    font-weight: 700;
+  }
+
+  #vedant-header-coins-{{ block.id }} .vedant-header-coins__popup ol {
+    display: grid;
+    gap: 10px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    counter-reset: vedant-coin-steps;
+    color: #332b34;
+    font-size: 14px;
+    line-height: 1.45;
+  }
+
+  #vedant-header-coins-{{ block.id }} .vedant-header-coins__popup li {
+    display: grid;
+    grid-template-columns: 29px minmax(0, 1fr);
+    align-items: start;
+    gap: 10px;
+    counter-increment: vedant-coin-steps;
+  }
+
+  #vedant-header-coins-{{ block.id }} .vedant-header-coins__popup li::before {
+    display: grid;
+    width: 29px;
+    height: 29px;
+    place-items: center;
+    border-radius: 50%;
+    color: #fff;
+    background: var(--vedant-pink);
+    content: counter(vedant-coin-steps);
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  #vedant-header-coins-{{ block.id }} .vedant-header-coins__view {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 52px;
+    margin-top: 22px;
+    border-radius: 10px;
+    color: #fff;
+    background: var(--vedant-pink);
+    font: inherit;
+    font-weight: 700;
+    line-height: 1;
+    text-align: center;
+    text-decoration: none;
+  }
+
+  @media (max-width: 640px) {
+    #vedant-header-coins-{{ block.id }} .vedant-header-coins__trigger {
+      width: 36px;
+      height: 36px;
+      padding: 3px;
+    }
+
+    #vedant-header-coins-{{ block.id }} .vedant-header-coins__icon {
+      width: 29px;
+      height: 29px;
+    }
+
+    #vedant-header-coins-{{ block.id }} .vedant-header-coins__popup {
+      width: min(360px, calc(100vw - 24px));
+      max-width: calc(100vw - 24px);
+      padding: 20px;
+      overflow-y: auto;
+    }
+
+    #vedant-header-coins-{{ block.id }} .vedant-header-coins__popup-icon {
+      width: 52px;
+      height: 52px;
+    }
+  }
 </style>
 
 <script>
@@ -228,6 +452,7 @@
 
   const trigger = root.querySelector(".vedant-header-coins__trigger");
   const popup = root.querySelector(".vedant-header-coins__popup");
+  const closeButton = root.querySelector(".vedant-header-coins__close");
   const total = root.querySelector("[data-vedant-header-total]");
   const popupTotal = root.querySelector("[data-vedant-header-popup-total]");
   const headerSelectors = [
@@ -335,6 +560,29 @@
     trigger.setAttribute("aria-expanded", "false");
   }
 
+  function positionMobilePopup() {
+    if (!window.matchMedia("(max-width: 640px)").matches) {
+      popup.style.top = "";
+      popup.style.right = "";
+      popup.style.maxHeight = "";
+      return;
+    }
+    if (popup.hidden) return;
+
+    const iconBounds = trigger.getBoundingClientRect();
+    const viewportPadding = 12;
+    const top = Math.round(iconBounds.bottom + 10);
+    popup.style.top = top + "px";
+    popup.style.right = viewportPadding + "px";
+    popup.style.maxHeight = Math.max(180, window.innerHeight - top - viewportPadding) + "px";
+  }
+
+  function openPopup() {
+    popup.hidden = false;
+    positionMobilePopup();
+    trigger.setAttribute("aria-expanded", "true");
+  }
+
   function scheduleRefresh() {
     clearTimeout(refreshTimer);
     refreshTimer = setTimeout(refresh, 90);
@@ -342,9 +590,14 @@
 
   trigger.addEventListener("click", function (event) {
     event.stopPropagation();
-    const open = popup.hidden;
-    popup.hidden = !open;
-    trigger.setAttribute("aria-expanded", open ? "true" : "false");
+    if (popup.hidden) openPopup();
+    else closePopup();
+  });
+
+  closeButton.addEventListener("click", function (event) {
+    event.stopPropagation();
+    closePopup();
+    trigger.focus();
   });
 
   document.addEventListener("click", function (event) {
@@ -352,9 +605,14 @@
   });
 
   document.addEventListener("keydown", function (event) {
-    if (event.key === "Escape") closePopup();
+    if (event.key === "Escape" && !popup.hidden) {
+      closePopup();
+      trigger.focus();
+    }
   });
 
+  window.addEventListener("resize", positionMobilePopup);
+  window.addEventListener("scroll", positionMobilePopup, true);
   document.addEventListener("cart:updated", scheduleRefresh);
   refresh();
 })();
