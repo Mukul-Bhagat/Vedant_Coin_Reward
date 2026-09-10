@@ -45,7 +45,6 @@
       <li>Choose "Use Coins" on the cart page.</li>
       <li>Your coins are automatically applied up to the available balance.</li>
     </ol>
-    <a class="vedant-header-coins__view" href="/account">View My Coins</a>
   </div>
 </div>
 
@@ -259,8 +258,7 @@
   }
 
   #vedant-header-coins-{{ block.id }} .vedant-header-coins__trigger:focus-visible,
-  #vedant-header-coins-{{ block.id }} .vedant-header-coins__close:focus-visible,
-  #vedant-header-coins-{{ block.id }} .vedant-header-coins__view:focus-visible {
+  #vedant-header-coins-{{ block.id }} .vedant-header-coins__close:focus-visible {
     outline: 2px solid var(--vedant-pink);
     outline-offset: 3px;
   }
@@ -399,22 +397,6 @@
     font-size: 14px;
     font-weight: 700;
     line-height: 1;
-  }
-
-  #vedant-header-coins-{{ block.id }} .vedant-header-coins__view {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 52px;
-    margin-top: 22px;
-    border-radius: 10px;
-    color: #fff;
-    background: var(--vedant-pink);
-    font: inherit;
-    font-weight: 700;
-    line-height: 1;
-    text-align: center;
-    text-decoration: none;
   }
 
   @media (max-width: 640px) {
