@@ -18,7 +18,8 @@
     "graphql-codegen": "graphql-codegen",
     "vite": "vite",
     "typecheck": "react-router typegen && tsc --noEmit",
-    "test:coins": "node --test app/services/coins.server.test.js"
+    "test:coins": "node --test app/services/coins.server.test.js",
+    "test:order-rewards": "node --test app/services/order-coins.server.test.js"
   },
   "type": "module",
   "engines": {

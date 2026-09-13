@@ -7,7 +7,7 @@ name = "Vedant Image Mapper"
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
-scopes = "read_files,read_orders,read_products,write_products,write_payment_customizations,write_app_proxy,write_discounts,write_discounts_allocator_functions"
+scopes = "read_files,read_orders,read_customers,read_products,read_payment_customizations,read_merchant_managed_fulfillment_orders,read_fulfillments,write_products,write_payment_customizations,write_app_proxy,write_discounts,write_discounts_allocator_functions"
 optional_scopes = [ ]
 use_legacy_install_flow = false
 [product.metafields.app.demo_info]
@@ -52,6 +52,22 @@ api_version = "2026-07"
   [[webhooks.subscriptions]]
   uri = "/webhooks/orders/paid"
   topics = [ "orders/paid" ]
+
+  [[webhooks.subscriptions]]
+  uri = "/webhooks/fulfillments/create"
+  topics = [ "fulfillments/create" ]
+
+  [[webhooks.subscriptions]]
+  uri = "/webhooks/fulfillments/update"
+  topics = [ "fulfillments/update" ]
+
+  [[webhooks.subscriptions]]
+  uri = "/webhooks/orders/fulfilled"
+  topics = [ "orders/fulfilled" ]
+
+  [[webhooks.subscriptions]]
+  uri = "/webhooks/fulfillment_orders/cancelled"
+  topics = [ "fulfillment_orders/cancelled" ]
 
   [[webhooks.subscriptions]]
   uri = "/webhooks/orders/cancelled"

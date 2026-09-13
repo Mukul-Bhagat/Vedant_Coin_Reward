@@ -59,7 +59,18 @@ export const action = async ({ request }) => {
     orderSubtotal,
   });
 
-  if (refundRatio <= 0) {
+  const lineItemQuantities = refundItems.reduce((quantities, item) => {
+    const lineItemId = String(item.line_item_id || item.line_item?.id || "").trim();
+    const quantity = Math.floor(Number(item.quantity));
+
+    if (lineItemId && Number.isFinite(quantity) && quantity > 0) {
+      quantities[lineItemId] = (quantities[lineItemId] || 0) + quantity;
+    }
+
+    return quantities;
+  }, {});
+
+  if (refundRatio <= 0 && Object.keys(lineItemQuantities).length === 0) {
     return new Response();
   }
 
@@ -68,6 +79,7 @@ export const action = async ({ request }) => {
     orderId,
     eventKey: `refund:${payload.id}`,
     refundRatio,
+    lineItemQuantities,
     description: `Coins reversed for refund ${payload.id}`,
   });
 

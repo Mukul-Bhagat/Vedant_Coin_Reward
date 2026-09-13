@@ -1,15 +1,13 @@
 import { authenticate } from "../shopify.server";
+import { commitCoinReservation } from "../services/coins.server";
 import {
-  creditCoins,
-  commitCoinReservation,
-} from "../services/coins.server";
-import {
-  calculateOrderRewardCredits,
-  getPaidOrderRewardTransactionKey,
+  awardOrderRewardCoins,
+  getOrderRewardTransactionKey,
 } from "../services/order-coins.server";
-
-const REWARD_NAMESPACE = "custom";
-const REWARD_KEY = "reward_coins_earned";
+import {
+  getOrderRewardMode,
+  isOnlinePaymentRewardMode,
+} from "../services/order-payment.server";
 
 export const action = async ({ request }) => {
   const {
@@ -23,20 +21,14 @@ export const action = async ({ request }) => {
   console.log(`Received ${topic} webhook for ${shop}`);
 
   if (!session || !admin) {
-    console.log(
-      `Skipping ${topic}: no active Shopify session.`,
-    );
-
+    console.log(`Skipping ${topic}: no active Shopify session.`);
     return new Response();
   }
 
   const order = payload;
 
   if (!order?.id) {
-    console.log(
-      `Skipping ${topic}: order ID is missing.`,
-    );
-
+    console.log(`Skipping ${topic}: order ID is missing.`);
     return new Response();
   }
 
@@ -46,20 +38,11 @@ export const action = async ({ request }) => {
     console.log(
       `Skipping paid order ${order.name || order.id}: no customer account.`,
     );
-
     return new Response();
   }
 
-  /*
-   * ---------------------------------------------------------
-   * STEP 1
-   * Commit any Coin reservation belonging to this cart.
-   * ---------------------------------------------------------
-   */
-
-  const cartToken = String(
-    order.cart_token || "",
-  ).trim();
+  // Keep redemption handling on orders/paid for every payment type.
+  const cartToken = String(order.cart_token || "").trim();
 
   if (cartToken) {
     try {
@@ -95,157 +78,40 @@ export const action = async ({ request }) => {
     );
   }
 
-  /*
-   * ---------------------------------------------------------
-   * STEP 2
-   * Award product reward coins.
-   *
-   * This happens only after the order is paid.
-   * ---------------------------------------------------------
-   */
-
-  const lineItems = Array.isArray(
-    order.line_items,
-  )
-    ? order.line_items
-    : [];
-
-  if (lineItems.length === 0) {
+  // `orders/paid` is an online reward trigger only when the store's existing
+  // payment customization is in ONLINE mode. Financial status and gateway
+  // labels are not reliable evidence of an online payment.
+  const paymentMode = await getOrderRewardMode({
+    admin,
+    shop,
+    customerId: String(customerId),
+    orderId: String(order.id),
+    orderName: order.name || null,
+  });
+  if (!isOnlinePaymentRewardMode(paymentMode)) {
     console.log(
-      `Skipping reward processing for ${order.name || order.id}: no line items.`,
+      `[coin-order] skipping paid reward for ${order.name || order.id}; payment mode is manual.`,
     );
-
     return new Response();
   }
 
-  const productIds = [
-    ...new Set(
-      lineItems
-        .map(
-          (item) => item?.product_id,
-        )
-        .filter(Boolean)
-        .map(
-          (productId) =>
-            `gid://shopify/Product/${productId}`,
-        ),
-    ),
-  ];
-
-  if (productIds.length === 0) {
-    console.log(
-      `Skipping reward processing for ${order.name || order.id}: no product IDs.`,
-    );
-
-    return new Response();
-  }
-
-  const response =
-    await admin.graphql(
-      `#graphql
-      query ProductRewardCoins($ids: [ID!]!) {
-        nodes(ids: $ids) {
-          ... on Product {
-            id
-            title
-            metafield(
-              namespace: "${REWARD_NAMESPACE}"
-              key: "${REWARD_KEY}"
-            ) {
-              value
-            }
-          }
-        }
-      }
-      `,
-      {
-        variables: {
-          ids: productIds,
-        },
-      },
-    );
-
-  const responseJson =
-    await response.json();
-
-  if (responseJson.errors?.length) {
-    console.error(
-      "Failed to read product reward metafields:",
-      responseJson.errors,
-    );
-
-    throw new Error(
-      "Shopify product reward metafield query failed",
-    );
-  }
-
-  const products =
-    responseJson.data?.nodes || [];
-
-  const rewardByProductId =
-    new Map();
-
-  for (const product of products) {
-    if (!product?.id) {
-      continue;
-    }
-
-    const rewardCoins = Number(
-      product.metafield?.value || 0,
-    );
-
-    rewardByProductId.set(
-      product.id,
-      {
-        title:
-          product.title || null,
-        rewardCoins:
-          Number.isFinite(
-            rewardCoins,
-          ) &&
-          rewardCoins > 0
-            ? Math.floor(
-                rewardCoins,
-              )
-            : 0,
-      },
-    );
-  }
-
-  const rewardCredits = calculateOrderRewardCredits({
-    lineItems,
-    rewardByProductId,
+  const { creditResults } = await awardOrderRewardCoins({
+    admin,
+    shop,
+    customerId,
+    order,
+    getTransactionKey: getOrderRewardTransactionKey,
   });
 
-  for (const rewardCredit of rewardCredits) {
-    const item = rewardCredit.lineItem;
-    const totalCoins = rewardCredit.coins;
-
-    await creditCoins({
+  for (const { rewardCredit, result } of creditResults) {
+    console.log("[coin-order] paid reward processed", {
       shop,
-      customerId:
-        String(customerId),
-      coins: totalCoins,
-      transactionKey: getPaidOrderRewardTransactionKey({
-        orderId: order.id,
-        lineItemId: item.id,
-        lineIndex: rewardCredit.index,
-      }),
-      orderId:
-        String(order.id),
-      orderName:
-        order.name || null,
-      productId:
-        rewardCredit.productId,
-      productTitle:
-        rewardCredit.productTitle,
-      description:
-        `Reward coins earned from ${order.name || order.id}`,
+      customerId: String(customerId),
+      orderId: String(order.id),
+      productId: rewardCredit.productId,
+      coins: rewardCredit.coins,
+      duplicate: result.duplicate,
     });
-
-    console.log(
-      `Credited ${totalCoins} coins for ${rewardCredit.productTitle || item.product_id} to customer ${customerId}.`,
-    );
   }
 
   return new Response();

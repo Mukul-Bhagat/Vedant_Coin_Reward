@@ -1,16 +1,13 @@
-// Prisma schema for Vedant Enterprise Shopify app
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
 }
 
-// Shopify app session
 model Session {
   id                  String    @id
   shop                String
@@ -31,93 +28,63 @@ model Session {
   refreshTokenExpires DateTime?
 }
 
-// Current coin balance for a Shopify customer
 model CustomerCoinBalance {
-  id         String @id @default(cuid())
-  shop       String
-  customerId String
-
-  // Coins currently available for the customer to use
-  availableCoins Int @default(0)
-
-  // Coins temporarily held while checkout is in progress
-  reservedCoins Int @default(0)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  transactions CoinTransaction[]
+  id             String            @id @default(cuid())
+  shop           String
+  customerId     String
+  availableCoins Int               @default(0)
+  reservedCoins  Int               @default(0)
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  transactions   CoinTransaction[]
 
   @@unique([shop, customerId])
   @@index([shop])
   @@index([customerId])
 }
 
-// Complete internal coin ledger
 model CoinTransaction {
-  id String @id @default(cuid())
-
-  shop       String
-  customerId String
-
-  // CREDIT, DEBIT, REVERSAL, ADJUSTMENT
-  type String
-
-  // Number of coins involved in this transaction
-  coins Int
-
-  // Balance after this transaction
-  balanceAfter Int
-
-  // Shopify order information when applicable
-  orderId   String?
-  orderName String?
-
-  // Product information for earned rewards
-  productId    String?
-  productTitle String?
-
-  // Prevent duplicate processing of the same event
-  transactionKey String @unique
-
-  // Optional reference to another transaction
+  id                   String              @id @default(cuid())
+  shop                 String
+  customerId           String
+  type                 String
+  coins                Int
+  balanceAfter         Int
+  orderId              String?
+  orderName            String?
+  productId            String?
+  productTitle         String?
+  transactionKey       String              @unique
   relatedTransactionId String?
-
-  // PENDING, COMPLETED, REVERSED, CANCELLED
-  status String @default("COMPLETED")
-
-  // Optional explanation/internal note
-  description String?
-
-  // Expiry support for future use
-  expiresAt DateTime?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  balance CustomerCoinBalance @relation(fields: [shop, customerId], references: [shop, customerId])
+  status               String              @default("COMPLETED")
+  description          String?
+  expiresAt            DateTime?
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+  lineItemId           String?
+  rewardQuantity       Int?
+  balance              CustomerCoinBalance @relation(fields: [shop, customerId], references: [shop, customerId])
 
   @@index([shop, customerId])
   @@index([shop, orderId])
+  @@index([shop, orderId, lineItemId])
   @@index([shop, customerId, createdAt])
   @@index([customerId, orderId])
 }
+
 model CoinReservation {
-  id         String   @id @default(cuid())
-  shop       String
-  customerId String
-  cartToken  String
+  id              String   @id @default(cuid())
+  shop            String
+  customerId      String
+  cartToken       String
   cartFingerprint String?
-  coins      Int
-  status     String   @default("ACTIVE")
-  expiresAt  DateTime
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  coins           Int
+  status          String   @default("ACTIVE")
+  expiresAt       DateTime
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   @@unique([shop, cartToken])
   @@index([shop, customerId])
   @@index([status, expiresAt])
 }
-
-
-

@@ -17,7 +17,7 @@ import {
 import { isCashOnDeliveryOrder } from "./order-payment.server.js";
 import {
   calculateOrderRewardCredits,
-  getPaidOrderRewardTransactionKey,
+  getOrderRewardTransactionKey,
 } from "./order-coins.server.js";
 import { authorizeCoinDiscount } from "./coin-authorization.server.js";
 
@@ -417,26 +417,106 @@ test("paid order reward calculation uses metafields and quantity", () => {
   );
 
   assert.equal(
-    getPaidOrderRewardTransactionKey({
+    getOrderRewardTransactionKey({
+      shop: "example.myshopify.com",
       orderId: "order-123",
       lineItemId: "line-456",
       lineIndex: credits[0].index,
     }),
-    "order-paid:order-123:line:line-456",
+    "order-reward:example.myshopify.com:order-123:line:line-456",
   );
   assert.equal(
-    getPaidOrderRewardTransactionKey({
+    getOrderRewardTransactionKey({
+      shop: "example.myshopify.com",
       orderId: "order-123",
       lineIndex: credits[1].index,
     }),
-    "order-paid:order-123:line-index:1",
+    "order-reward:example.myshopify.com:order-123:line-index:1",
   );
   assert.throws(() =>
-    getPaidOrderRewardTransactionKey({
+    getOrderRewardTransactionKey({
+      shop: "example.myshopify.com",
       orderId: "order-123",
       lineIndex: -1,
     }),
   );
+});
+
+test("line rewards are idempotent and reverse only the refunded quantity", async () => {
+  const isolatedShop = `delivery-reward-${Date.now()}.myshopify.com`;
+  const isolatedCustomer = `delivery-reward-customer-${Date.now()}`;
+  const orderId = "delivery-reward-order";
+  const transactionKey = getOrderRewardTransactionKey({
+    shop: isolatedShop,
+    orderId,
+    lineItemId: "delivery-reward-line",
+    lineIndex: 0,
+  });
+
+  try {
+    const first = await creditCoins({
+      shop: isolatedShop,
+      customerId: isolatedCustomer,
+      coins: 125,
+      transactionKey,
+      orderId,
+      lineItemId: "delivery-reward-line",
+      rewardQuantity: 5,
+    });
+    const duplicate = await creditCoins({
+      shop: isolatedShop,
+      customerId: isolatedCustomer,
+      coins: 125,
+      transactionKey,
+      orderId,
+      lineItemId: "delivery-reward-line",
+      rewardQuantity: 5,
+    });
+
+    assert.equal(first.duplicate, false);
+    assert.equal(duplicate.duplicate, true);
+    assert.equal(await getCoinBalance(isolatedShop, isolatedCustomer), 125);
+
+    const partialRefund = await reverseOrderCoinTransactions({
+      shop: isolatedShop,
+      orderId,
+      eventKey: `refund:${orderId}`,
+      lineItemQuantities: { "delivery-reward-line": 2 },
+    });
+    assert.equal(partialRefund.reversedCoins, 50);
+    assert.equal(await getCoinBalance(isolatedShop, isolatedCustomer), 75);
+
+    const duplicateRefund = await reverseOrderCoinTransactions({
+      shop: isolatedShop,
+      orderId,
+      eventKey: `refund:${orderId}`,
+      lineItemQuantities: { "delivery-reward-line": 2 },
+    });
+    assert.equal(duplicateRefund.reversedCoins, 0);
+    assert.equal(await getCoinBalance(isolatedShop, isolatedCustomer), 75);
+
+    const remainingRefund = await reverseOrderCoinTransactions({
+      shop: isolatedShop,
+      orderId,
+      eventKey: `refund:${orderId}:remaining`,
+      lineItemQuantities: { "delivery-reward-line": 5 },
+    });
+    assert.equal(remainingRefund.reversedCoins, 75);
+    assert.equal(await getCoinBalance(isolatedShop, isolatedCustomer), 0);
+    assert.equal(
+      await prisma.coinTransaction.count({
+        where: {
+          shop: isolatedShop,
+          relatedTransactionId: first.transaction.id,
+          type: "REVERSAL",
+          status: "COMPLETED",
+        },
+      }),
+      2,
+    );
+  } finally {
+    await cleanupShop(isolatedShop);
+  }
 });
 
 test("balance lookup releases an expired reservation before returning coins", async () => {

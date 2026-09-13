@@ -125,6 +125,8 @@ export async function creditCoins({
   orderName = null,
   productId = null,
   productTitle = null,
+  lineItemId = null,
+  rewardQuantity = null,
   description = null,
   expiresAt = null,
 }) {
@@ -140,6 +142,18 @@ export async function creditCoins({
 
   if (!transactionKey) {
     throw new Error("transactionKey is required");
+  }
+
+  const normalizedRewardQuantity =
+    rewardQuantity === null || rewardQuantity === undefined
+      ? null
+      : Math.floor(Number(rewardQuantity));
+
+  if (
+    normalizedRewardQuantity !== null &&
+    (!Number.isFinite(normalizedRewardQuantity) || normalizedRewardQuantity <= 0)
+  ) {
+    throw new Error("rewardQuantity must be a positive integer when provided");
   }
 
   return prisma.$transaction(async (tx) => {
@@ -206,6 +220,8 @@ export async function creditCoins({
           orderName,
           productId,
           productTitle,
+          lineItemId: lineItemId ? String(lineItemId) : null,
+          rewardQuantity: normalizedRewardQuantity,
           transactionKey,
           status: "COMPLETED",
           description,
@@ -746,6 +762,7 @@ export async function reverseOrderCoinTransactions({
   orderId,
   eventKey,
   refundRatio = 1,
+  lineItemQuantities = null,
   description = "Order coin reconciliation",
 }) {
   if (!shop || !orderId || !eventKey) {
@@ -753,8 +770,12 @@ export async function reverseOrderCoinTransactions({
   }
 
   const ratio = Math.min(1, Math.max(0, Number(refundRatio)));
+  const refundedQuantities = normalizeLineItemQuantities(lineItemQuantities);
 
-  if (!Number.isFinite(ratio) || ratio <= 0) {
+  if (
+    (!Number.isFinite(ratio) || ratio <= 0) &&
+    refundedQuantities.size === 0
+  ) {
     return { reversedCoins: 0, duplicate: false };
   }
 
@@ -783,24 +804,70 @@ export async function reverseOrderCoinTransactions({
         continue;
       }
 
+      const isLineReward = original.transactionKey.startsWith("order-reward:");
+
+      // New rewards are never reversed from an order-wide financial ratio.
+      // They require the exact Shopify refund line and quantity. This keeps a
+      // refund/cancellation of a non-reward product from touching other lines.
+      if (isLineReward && refundedQuantities.size === 0) {
+        continue;
+      }
+
       const previousReversals = await tx.coinTransaction.findMany({
         where: {
           relatedTransactionId: original.id,
           type: "REVERSAL",
           status: "COMPLETED",
         },
-        select: { coins: true },
+        select: { coins: true, rewardQuantity: true },
       });
 
-      const targetCoins = Math.floor(original.coins * ratio);
-      const alreadyReversed = previousReversals.reduce(
-        (total, transaction) => total + transaction.coins,
-        0,
-      );
-      const requestedReversal = Math.max(
-        0,
-        targetCoins - alreadyReversed,
-      );
+      let requestedReversal;
+      let reversalQuantity = null;
+      let rewardUnitCoins = null;
+
+      if (isLineReward) {
+        const lineItemId = String(original.lineItemId || "").trim();
+        const originalQuantity = Number(original.rewardQuantity);
+        const requestedQuantity = refundedQuantities.get(lineItemId) || 0;
+
+        if (
+          !lineItemId ||
+          !Number.isInteger(originalQuantity) ||
+          originalQuantity <= 0 ||
+          requestedQuantity <= 0
+        ) {
+          continue;
+        }
+
+        const unitCoins = original.coins / originalQuantity;
+        if (!Number.isInteger(unitCoins) || unitCoins <= 0) {
+          throw new Error("Order reward transaction has an invalid reward quantity");
+        }
+        rewardUnitCoins = unitCoins;
+
+        const alreadyReversedQuantity = previousReversals.reduce(
+          (total, transaction) =>
+            total +
+            (Number.isInteger(transaction.rewardQuantity)
+              ? transaction.rewardQuantity
+              : Math.ceil(transaction.coins / unitCoins)),
+          0,
+        );
+
+        reversalQuantity = Math.max(
+          0,
+          Math.min(requestedQuantity, originalQuantity - alreadyReversedQuantity),
+        );
+        requestedReversal = reversalQuantity * unitCoins;
+      } else {
+        const targetCoins = Math.floor(original.coins * ratio);
+        const alreadyReversed = previousReversals.reduce(
+          (total, transaction) => total + transaction.coins,
+          0,
+        );
+        requestedReversal = Math.max(0, targetCoins - alreadyReversed);
+      }
 
       if (requestedReversal <= 0) {
         continue;
@@ -826,6 +893,13 @@ export async function reverseOrderCoinTransactions({
 
       if (actualReversal <= 0) {
         continue;
+      }
+
+      if (isLineReward && actualReversal !== requestedReversal) {
+        reversalQuantity =
+          actualReversal % rewardUnitCoins === 0
+            ? actualReversal / rewardUnitCoins
+            : null;
       }
 
       const availableCoins =
@@ -856,6 +930,8 @@ export async function reverseOrderCoinTransactions({
           orderName: original.orderName,
           productId: original.productId,
           productTitle: original.productTitle,
+          lineItemId: original.lineItemId,
+          rewardQuantity: reversalQuantity,
           transactionKey,
           relatedTransactionId: original.id,
           status: "COMPLETED",
@@ -871,4 +947,25 @@ export async function reverseOrderCoinTransactions({
       duplicate: originals.length > 0 && reversedCoins === 0,
     };
   });
+}
+
+function normalizeLineItemQuantities(lineItemQuantities) {
+  const quantities = new Map();
+  const entries =
+    lineItemQuantities instanceof Map
+      ? [...lineItemQuantities.entries()]
+      : Array.isArray(lineItemQuantities)
+        ? lineItemQuantities
+        : Object.entries(lineItemQuantities || {});
+
+  for (const [lineItemId, quantity] of entries) {
+    const id = String(lineItemId || "").trim();
+    const normalizedQuantity = Math.floor(Number(quantity));
+
+    if (id && Number.isFinite(normalizedQuantity) && normalizedQuantity > 0) {
+      quantities.set(id, (quantities.get(id) || 0) + normalizedQuantity);
+    }
+  }
+
+  return quantities;
 }

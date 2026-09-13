@@ -1,9 +1,13 @@
 import { authenticate } from "../shopify.server";
 import { commitCoinReservation } from "../services/coins.server";
-import { isCashOnDeliveryOrder } from "../services/order-payment.server";
+import {
+  getStorePaymentRewardMode,
+  isCashOnDeliveryOrder,
+  recordOrderRewardMode,
+} from "../services/order-payment.server";
 
 export const action = async ({ request }) => {
-  const { payload, shop, topic, session } =
+  const { payload, shop, topic, admin, session } =
     await authenticate.webhook(request);
 
   console.log(`Received ${topic} webhook for ${shop}`);
@@ -11,7 +15,22 @@ export const action = async ({ request }) => {
   const order = payload;
   const customerId = order?.customer?.id;
 
-  if (!session || !order?.id || !customerId || !isCashOnDeliveryOrder(order)) {
+  if (!session || !admin || !order?.id || !customerId) {
+    return new Response();
+  }
+
+  const paymentMode = await getStorePaymentRewardMode(admin);
+  await recordOrderRewardMode({
+    shop,
+    customerId: String(customerId),
+    orderId: String(order.id),
+    orderName: order.name || null,
+    mode: paymentMode,
+  });
+
+  // Redemption is only committed immediately for the existing COD workflow.
+  // Reward calculation is deliberately independent of this gateway label.
+  if (!isCashOnDeliveryOrder(order)) {
     return new Response();
   }
 
