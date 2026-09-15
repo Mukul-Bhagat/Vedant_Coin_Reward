@@ -6,7 +6,6 @@ import {
 } from "../services/order-coins.server";
 import {
   getOrderRewardMode,
-  isOnlinePaymentRewardMode,
 } from "../services/order-payment.server";
 
 export const action = async ({ request }) => {
@@ -81,20 +80,13 @@ export const action = async ({ request }) => {
   // `orders/paid` is an online reward trigger only when the store's existing
   // payment customization is in ONLINE mode. Financial status and gateway
   // labels are not reliable evidence of an online payment.
-  const paymentMode = await getOrderRewardMode({
+  await getOrderRewardMode({
     admin,
     shop,
     customerId: String(customerId),
     orderId: String(order.id),
     orderName: order.name || null,
   });
-  if (!isOnlinePaymentRewardMode(paymentMode)) {
-    console.log(
-      `[coin-order] skipping paid reward for ${order.name || order.id}; payment mode is manual.`,
-    );
-    return new Response();
-  }
-
   const { creditResults } = await awardOrderRewardCoins({
     admin,
     shop,
