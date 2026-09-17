@@ -81,10 +81,15 @@ model CoinReservation {
   coins           Int
   status          String   @default("ACTIVE")
   expiresAt       DateTime
+  orderId         String?
+  orderName       String?
+  committedAt     DateTime?
+  releasedAt      DateTime?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
   @@unique([shop, cartToken])
+  @@unique([shop, orderId])
   @@index([shop, customerId])
   @@index([status, expiresAt])
 }

@@ -2,7 +2,6 @@ import { authenticate } from "../shopify.server";
 import { commitCoinReservation } from "../services/coins.server";
 import {
   getStorePaymentRewardMode,
-  isCashOnDeliveryOrder,
   recordOrderRewardMode,
 } from "../services/order-payment.server";
 
@@ -28,12 +27,6 @@ export const action = async ({ request }) => {
     mode: paymentMode,
   });
 
-  // Redemption is only committed immediately for the existing COD workflow.
-  // Reward calculation is deliberately independent of this gateway label.
-  if (!isCashOnDeliveryOrder(order)) {
-    return new Response();
-  }
-
   const cartToken = String(order.cart_token || "").trim();
   if (!cartToken) {
     console.log("[coin-cod] order has no cart token", {
@@ -50,10 +43,10 @@ export const action = async ({ request }) => {
     cartToken,
     orderId: String(order.id),
     orderName: order.name || null,
-    description: `Coins redeemed on COD order ${order.name || order.id}`,
+    description: `Coins redeemed on order ${order.name || order.id}`,
   });
 
-  console.log("[coin-cod] reservation processed", {
+  console.log("[coin-order] created reservation processed", {
     shop,
     customerId: String(customerId),
     orderId: String(order.id),

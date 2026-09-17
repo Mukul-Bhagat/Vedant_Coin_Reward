@@ -1,5 +1,4 @@
 import { authenticate } from "../shopify.server";
-import { commitCoinReservation } from "../services/coins.server";
 import {
   awardOrderRewardCoins,
   getOrderRewardTransactionKey,
@@ -38,43 +37,6 @@ export const action = async ({ request }) => {
       `Skipping paid order ${order.name || order.id}: no customer account.`,
     );
     return new Response();
-  }
-
-  // Keep redemption handling on orders/paid for every payment type.
-  const cartToken = String(order.cart_token || "").trim();
-
-  if (cartToken) {
-    try {
-      const commitResult = await commitCoinReservation({
-        shop,
-        customerId: String(customerId),
-        cartToken,
-        orderId: String(order.id),
-        orderName: order.name || null,
-        description: `Coins redeemed on paid order ${order.name || order.id}`,
-      });
-
-      console.log("[coin-order] paid reservation processed", {
-        shop,
-        customerId: String(customerId),
-        orderId: String(order.id),
-        orderName: order.name || null,
-        cartToken,
-        reservationId: commitResult.reservation?.id || null,
-        duplicate: commitResult.duplicate,
-        committed: !commitResult.notFound,
-      });
-    } catch (error) {
-      console.error(
-        `Failed to commit coin reservation for order ${order.name || order.id}:`,
-        error,
-      );
-      throw error;
-    }
-  } else {
-    console.log(
-      `Paid order ${order.name || order.id} has no cart_token; no coin reservation can be matched.`,
-    );
   }
 
   // `orders/paid` is an online reward trigger only when the store's existing

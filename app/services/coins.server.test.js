@@ -10,6 +10,7 @@ import {
   getCoinBalance,
   reconcileCoinReservation,
   releaseCoinReservation,
+  releaseCommittedCoinReservation,
   releaseExpiredCoinReservations,
   reserveCoins,
   reverseOrderCoinTransactions,
@@ -69,9 +70,9 @@ async function assertCoinInvariants(shop, customerId) {
 
     if (reservation.status === "ACTIVE") {
       assert.equal(transaction.status, "PENDING");
-    } else if (reservation.status === "COMPLETED") {
+    } else if (reservation.status === "COMMITTED") {
       assert.equal(transaction.status, "COMPLETED");
-    } else if (reservation.status === "CANCELLED") {
+    } else if (reservation.status === "RELEASED") {
       assert.equal(transaction.status, "CANCELLED");
     }
   }
@@ -87,11 +88,11 @@ async function assertCoinInvariants(shop, customerId) {
       continue;
     }
     assert.notEqual(
-      transaction.status === "PENDING" && reservation.status === "COMPLETED",
+      transaction.status === "PENDING" && reservation.status === "COMMITTED",
       true,
     );
     assert.notEqual(
-      transaction.status === "COMPLETED" && reservation.status === "CANCELLED",
+      transaction.status === "COMPLETED" && reservation.status === "RELEASED",
       true,
     );
   }
@@ -195,6 +196,16 @@ test("coin service handles balances, reservations, expiry, and idempotency", asy
   assert.equal(
     (await authorizeCoinDiscount({
       shop,
+      customerId,
+      cartToken: "cart-a",
+      requestedCoins: 25,
+      merchandiseSubtotal: 20,
+    })).authorized,
+    false,
+  );
+  assert.equal(
+    (await authorizeCoinDiscount({
+      shop,
       customerId: "another-customer",
       cartToken: "cart-a",
       requestedCoins: 25,
@@ -260,6 +271,7 @@ test("coin service handles balances, reservations, expiry, and idempotency", asy
     shop,
     customerId,
     transactionKey: `coin-reservation:${committed.reservation.id}`,
+    orderId: "order-redeem",
   });
   assert.equal(committedResult.balance, 85);
   assert.equal((await balance()).reservedCoins, 0);
@@ -271,21 +283,13 @@ test("coin service handles balances, reservations, expiry, and idempotency", asy
     })).duplicate,
     true,
   );
-  await prisma.coinTransaction.update({
-    where: {
-      transactionKey: `coin-reservation:${committed.reservation.id}`,
-    },
-    data: {
-      orderId: "order-redeem",
-    },
-  });
   const redeemedReversal = await reverseOrderCoinTransactions({
     shop,
     orderId: "order-redeem",
     eventKey: "refund:redeemed",
     refundRatio: 0.5,
   });
-  assert.equal(redeemedReversal.reversedCoins, 20);
+  assert.equal(redeemedReversal.reversedCoins, 0);
   await assert.rejects(() =>
     releaseCoinReservation({
       shop,
@@ -324,7 +328,7 @@ test("coin service handles balances, reservations, expiry, and idempotency", asy
   const cleanup = await releaseExpiredCoinReservations({ shop, customerId });
   assert.equal(cleanup.released, 1);
   assert.equal((await balance()).reservedCoins, 0);
-  assert.equal((await balance()).availableCoins, 105);
+  assert.equal((await balance()).availableCoins, 85);
   assert.equal((await releaseExpiredCoinReservations({ shop, customerId })).released, 0);
   assert.equal(expired.reservation.status, "ACTIVE");
 
@@ -554,7 +558,7 @@ test("balance lookup releases an expired reservation before returning coins", as
     const storedTransaction = await prisma.coinTransaction.findUnique({
       where: { transactionKey: `coin-reservation:${reservation.reservation.id}` },
     });
-    assert.equal(storedReservation.status, "CANCELLED");
+    assert.equal(storedReservation.status, "RELEASED");
     assert.equal(storedTransaction.status, "CANCELLED");
   } finally {
     await cleanupShop(isolatedShop);
@@ -604,7 +608,7 @@ test("reserveCoins releases an expired reservation before reserving again", asyn
     const oldTransaction = await prisma.coinTransaction.findUnique({
       where: { transactionKey: `coin-reservation:${expired.reservation.id}` },
     });
-    assert.equal(oldReservation.status, "CANCELLED");
+    assert.equal(oldReservation.status, "RELEASED");
     assert.equal(oldTransaction.status, "CANCELLED");
   } finally {
     await cleanupShop(isolatedShop);
@@ -814,7 +818,7 @@ test("cart fingerprint reconciliation releases changed checkout state exactly on
   }
 });
 
-test("cart-token commits attach order metadata and remain idempotent", async () => {
+test("orders/create commits every payment type by cart token and remains idempotent", async () => {
   const isolatedShop = `order-commit-${Date.now()}.myshopify.com`;
   const isolatedCustomer = `order-commit-customer-${Date.now()}`;
   const cartToken = "cod-cart?key=test";
@@ -844,6 +848,9 @@ test("cart-token commits attach order metadata and remain idempotent", async () 
     assert.equal(first.duplicate, false);
     assert.equal(first.transaction.status, "COMPLETED");
     assert.equal(first.transaction.orderId, "order-cod-1");
+    assert.equal(first.reservation.status, "COMMITTED");
+    assert.equal(first.reservation.orderId, "order-cod-1");
+    assert.equal(first.reservation.orderName, "#COD1");
     assert.deepEqual(await balanceFor(isolatedShop, isolatedCustomer), {
       availableCoins: 0,
       reservedCoins: 0,
@@ -864,6 +871,136 @@ test("cart-token commits attach order metadata and remain idempotent", async () 
     await prisma.coinTransaction.deleteMany({ where: { shop: isolatedShop } });
     await prisma.coinReservation.deleteMany({ where: { shop: isolatedShop } });
     await prisma.customerCoinBalance.deleteMany({ where: { shop: isolatedShop } });
+  }
+});
+
+test("committed redemptions survive payment-pending cleanup and cancel only once", async () => {
+  const isolatedShop = `committed-redemption-${Date.now()}.myshopify.com`;
+  const isolatedCustomer = `committed-redemption-customer-${Date.now()}`;
+  const cartToken = "committed-redemption-cart?key=test";
+  const orderId = "committed-redemption-order";
+
+  try {
+    await creditCoins({
+      shop: isolatedShop,
+      customerId: isolatedCustomer,
+      coins: 100,
+      transactionKey: "committed-redemption:credit",
+    });
+    const missingCommit = await commitCoinReservation({
+      shop: isolatedShop,
+      customerId: isolatedCustomer,
+      cartToken: "no-existing-reservation",
+      orderId: "missing-order",
+    });
+    assert.equal(missingCommit.notFound, true);
+    assert.deepEqual(await balanceFor(isolatedShop, isolatedCustomer), {
+      availableCoins: 100,
+      reservedCoins: 0,
+    });
+    const active = await reserveCoins({
+      shop: isolatedShop,
+      customerId: isolatedCustomer,
+      cartToken,
+      requestedCoins: 100,
+      expiresAt: new Date(Date.now() + 60_000),
+    });
+
+    await assert.rejects(() =>
+      commitCoinReservation({
+        shop: isolatedShop,
+        customerId: "another-customer",
+        reservationId: active.reservation.id,
+        orderId,
+      }),
+    );
+    const committed = await commitCoinReservation({
+      shop: isolatedShop,
+      customerId: isolatedCustomer,
+      cartToken,
+      orderId,
+      orderName: "#COMMITTED",
+    });
+    assert.equal(committed.reservation.status, "COMMITTED");
+    assert.equal(committed.reservation.orderId, orderId);
+    assert.ok(committed.reservation.committedAt);
+    assert.deepEqual(await balanceFor(isolatedShop, isolatedCustomer), {
+      availableCoins: 0,
+      reservedCoins: 0,
+    });
+
+    // A payment-pending/paid/fulfilled lifecycle may run expiry or cart
+    // reconciliation later; neither must release a committed redemption.
+    const expiry = await releaseExpiredCoinReservations({
+      shop: isolatedShop,
+      customerId: isolatedCustomer,
+      now: new Date(Date.now() + 3_600_000),
+    });
+    assert.equal(expiry.released, 0);
+    const reconcile = await reconcileCoinReservation({
+      shop: isolatedShop,
+      customerId: isolatedCustomer,
+      reservationId: active.reservation.id,
+      cartToken,
+      cartFingerprint: "changed-after-order",
+    });
+    assert.equal(reconcile.duplicate, true);
+    assert.equal(reconcile.released, false);
+    assert.deepEqual(await balanceFor(isolatedShop, isolatedCustomer), {
+      availableCoins: 0,
+      reservedCoins: 0,
+    });
+    await assert.rejects(() =>
+      reserveCoins({
+        shop: isolatedShop,
+        customerId: isolatedCustomer,
+        cartToken: "second-order-before-cancel",
+        requestedCoins: 100,
+      }),
+    );
+
+    const missing = await releaseCommittedCoinReservation({
+      shop: isolatedShop,
+      orderId: "missing-order",
+    });
+    assert.equal(missing.duplicate, true);
+    assert.equal(missing.reservation, null);
+
+    const firstCancellation = await releaseCommittedCoinReservation({
+      shop: isolatedShop,
+      orderId,
+    });
+    const duplicateCancellation = await releaseCommittedCoinReservation({
+      shop: isolatedShop,
+      orderId,
+    });
+    assert.equal(firstCancellation.released, true);
+    assert.equal(duplicateCancellation.duplicate, true);
+    assert.equal(firstCancellation.reservation.status, "RELEASED");
+    assert.ok(firstCancellation.reservation.releasedAt);
+    assert.deepEqual(await balanceFor(isolatedShop, isolatedCustomer), {
+      availableCoins: 100,
+      reservedCoins: 0,
+    });
+    assert.equal(
+      await prisma.coinTransaction.count({
+        where: {
+          transactionKey: `coin-redemption-reversal:${isolatedShop}:${active.reservation.id}`,
+        },
+      }),
+      1,
+    );
+
+    const replacement = await reserveCoins({
+      shop: isolatedShop,
+      customerId: isolatedCustomer,
+      cartToken: "second-order-after-cancel",
+      requestedCoins: 100,
+    });
+    assert.equal(replacement.duplicate, false);
+    await assertCoinInvariants(isolatedShop, isolatedCustomer);
+  } finally {
+    await cleanupShop(isolatedShop);
   }
 });
 
@@ -1028,7 +1165,7 @@ test("full lifecycle group 4: active reservation protects the remaining balance"
   }
 });
 
-test("full lifecycle groups 10 and 12: COD commit is explicit and idempotent", async () => {
+test("full lifecycle groups 10 and 12: order creation commits before payment and is idempotent", async () => {
   const isolatedShop = `matrix-cod-${Date.now()}.myshopify.com`;
   const isolatedCustomer = `matrix-cod-customer-${Date.now()}`;
   const cartToken = "matrix-cod-cart?key=raw-token-key";
@@ -1088,11 +1225,15 @@ test("full lifecycle groups 10 and 12: COD commit is explicit and idempotent", a
   }
 });
 
-test("full lifecycle group 11: non-COD orders do not commit a reservation", async () => {
+test("full lifecycle group 11: non-COD orders commit at creation, not payment", async () => {
   const isolatedShop = `matrix-non-cod-${Date.now()}.myshopify.com`;
   const isolatedCustomer = `matrix-non-cod-customer-${Date.now()}`;
   const cartToken = "matrix-non-cod-cart?key=raw-token-key";
   const order = {
+    id: "matrix-non-cod-order",
+    name: "#MATRIX-NON-COD",
+    customer: { id: isolatedCustomer },
+    cart_token: cartToken,
     gateway: "shopify_payments",
     payment_gateway_names: ["Shopify Payments"],
   };
@@ -1104,7 +1245,7 @@ test("full lifecycle group 11: non-COD orders do not commit a reservation", asyn
       coins: 50,
       transactionKey: "matrix-non-cod:credit",
     });
-    await reserveCoins({
+    const created = await reserveCoins({
       shop: isolatedShop,
       customerId: isolatedCustomer,
       cartToken,
@@ -1112,17 +1253,21 @@ test("full lifecycle group 11: non-COD orders do not commit a reservation", asyn
     });
 
     assert.equal(isCashOnDeliveryOrder(order), false);
-    const reservation = await prisma.coinReservation.findUnique({
-      where: { shop_cartToken: { shop: isolatedShop, cartToken } },
+    const committed = await commitCoinReservation({
+      shop: isolatedShop,
+      customerId: String(order.customer.id),
+      cartToken: order.cart_token,
+      orderId: String(order.id),
+      orderName: order.name,
     });
     const transaction = await prisma.coinTransaction.findUnique({
-      where: { transactionKey: `coin-reservation:${reservation.id}` },
+      where: { transactionKey: `coin-reservation:${created.reservation.id}` },
     });
-    assert.equal(reservation.status, "ACTIVE");
-    assert.equal(transaction.status, "PENDING");
+    assert.equal(committed.reservation.status, "COMMITTED");
+    assert.equal(transaction.status, "COMPLETED");
     assert.deepEqual(await balanceFor(isolatedShop, isolatedCustomer), {
       availableCoins: 0,
-      reservedCoins: 50,
+      reservedCoins: 0,
     });
     await assertCoinInvariants(isolatedShop, isolatedCustomer);
   } finally {
@@ -1164,7 +1309,7 @@ test("full lifecycle group 14: same-token cart change releases and re-reserves",
     const releasedTransaction = await prisma.coinTransaction.findUnique({
       where: { transactionKey: `coin-reservation:${first.reservation.id}` },
     });
-    assert.equal(releasedReservation.status, "CANCELLED");
+    assert.equal(releasedReservation.status, "RELEASED");
     assert.equal(releasedTransaction.status, "CANCELLED");
     assert.equal(await getCoinBalance(isolatedShop, isolatedCustomer), 50);
     const replacement = await reserveCoins({
@@ -1321,7 +1466,7 @@ test("full lifecycle groups 18 and 19: rewards happen only after successful comm
   }
 });
 
-test("full lifecycle group 23: cancellation/refund restoration is idempotent", async () => {
+test("full lifecycle group 23: full cancellation restores a committed redemption exactly once", async () => {
   const isolatedShop = `matrix-refund-${Date.now()}.myshopify.com`;
   const isolatedCustomer = `matrix-refund-customer-${Date.now()}`;
 
@@ -1345,18 +1490,16 @@ test("full lifecycle group 23: cancellation/refund restoration is idempotent", a
       orderId: "matrix-refund-order",
     });
 
-    const first = await reverseOrderCoinTransactions({
+    const first = await releaseCommittedCoinReservation({
       shop: isolatedShop,
       orderId: "matrix-refund-order",
-      eventKey: "order-cancelled:matrix-refund-order",
     });
-    const duplicate = await reverseOrderCoinTransactions({
+    const duplicate = await releaseCommittedCoinReservation({
       shop: isolatedShop,
       orderId: "matrix-refund-order",
-      eventKey: "order-cancelled:matrix-refund-order",
     });
 
-    assert.equal(first.reversedCoins, 50);
+    assert.equal(first.released, true);
     assert.equal(duplicate.duplicate, true);
     assert.deepEqual(await balanceFor(isolatedShop, isolatedCustomer), {
       availableCoins: 50,

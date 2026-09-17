@@ -1,5 +1,8 @@
 import { authenticate } from "../shopify.server";
-import { reverseOrderCoinTransactions } from "../services/coins.server";
+import {
+  releaseCommittedCoinReservation,
+  reverseOrderCoinTransactions,
+} from "../services/coins.server";
 import { getRefundedLineItemQuantities } from "../services/order-coins.server";
 import {
   getOrderRewardState,
@@ -30,6 +33,12 @@ export const action = async ({ request }) => {
   const lineItemQuantities = Object.fromEntries(
     getRefundedLineItemQuantities(order),
   );
+
+  await releaseCommittedCoinReservation({
+    shop,
+    orderId: String(payload.id),
+    description: `Coins restored for cancelled order ${payload.name || payload.id}`,
+  });
 
   await reverseOrderCoinTransactions({
     shop,

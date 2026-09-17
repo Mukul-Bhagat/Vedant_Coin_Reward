@@ -1,4 +1,21 @@
 import prisma from "../db.server.js";
+import { Prisma } from "@prisma/client";
+
+const SERIALIZATION_RETRY_LIMIT = 3;
+
+async function runCoinTransaction(operation) {
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      return await prisma.$transaction(operation, {
+        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+      });
+    } catch (error) {
+      if (error?.code !== "P2034" || attempt >= SERIALIZATION_RETRY_LIMIT) {
+        throw error;
+      }
+    }
+  }
+}
 
 /**
  * Get the customer's current available coin balance.
@@ -156,7 +173,7 @@ export async function creditCoins({
     throw new Error("rewardQuantity must be a positive integer when provided");
   }
 
-  return prisma.$transaction(async (tx) => {
+  return runCoinTransaction(async (tx) => {
     const existing = await tx.coinTransaction.findUnique({
       where: {
         transactionKey,
@@ -277,7 +294,7 @@ export async function reserveCoins({
     customerId: String(customerId),
   });
 
-  return prisma.$transaction(async (tx) => {
+  return runCoinTransaction(async (tx) => {
     const existingReservation = await tx.coinReservation.findUnique({
       where: { shop_cartToken: { shop, cartToken } },
     });
@@ -287,7 +304,7 @@ export async function reserveCoins({
       throw new Error("Cart reservation belongs to another customer");
     }
 
-    if (existingReservation?.status === "COMPLETED") {
+    if (existingReservation?.status === "COMMITTED") {
       throw new Error("Coin reservation has already been completed");
     }
 
@@ -343,14 +360,17 @@ export async function reserveCoins({
       });
       await tx.coinReservation.update({
         where: { id: existingReservation.id },
-        data: { status: "CANCELLED" },
+        data: { status: "RELEASED", releasedAt: new Date() },
       });
       await tx.coinReservation.delete({ where: { id: existingReservation.id } });
       balanceRecord.availableCoins += existingReservation.coins;
       balanceRecord.reservedCoins -= existingReservation.coins;
     }
 
-    if (existingReservation?.status === "CANCELLED") {
+    if (existingReservation?.status === "RELEASED") {
+      if (existingReservation.orderId) {
+        throw new Error("Cart reservation is already linked to an order");
+      }
       await tx.coinReservation.delete({ where: { id: existingReservation.id } });
     }
 
@@ -452,7 +472,7 @@ export async function commitCoinReservation({
     throw new Error("reservationId or cartToken is required");
   }
 
-  return prisma.$transaction(async (tx) => {
+  return runCoinTransaction(async (tx) => {
     const reservation = reservationId
       ? await tx.coinReservation.findUnique({ where: { id: reservationId } })
       : await tx.coinReservation.findUnique({
@@ -483,11 +503,23 @@ export async function commitCoinReservation({
       throw new Error("Coin reservation not found");
     }
 
-    if (transaction.status === "COMPLETED") {
+    if (reservation.status === "COMMITTED" && transaction.status === "COMPLETED") {
+      if (orderId && reservation.orderId && reservation.orderId !== String(orderId)) {
+        throw new Error("Coin reservation is already linked to another order");
+      }
       return {
         reservation,
         transaction,
         duplicate: true,
+      };
+    }
+
+    if (reservation.status !== "ACTIVE") {
+      return {
+        reservation,
+        transaction,
+        duplicate: true,
+        notCommittable: true,
       };
     }
 
@@ -544,9 +576,14 @@ export async function commitCoinReservation({
         },
       });
 
-    await tx.coinReservation.updateMany({
-      where: { id: reservation.id, status: "ACTIVE" },
-      data: { status: "COMPLETED" },
+    const committedReservation = await tx.coinReservation.update({
+      where: { id: reservation.id },
+      data: {
+        status: "COMMITTED",
+        orderId: orderId ? String(orderId) : null,
+        orderName: orderName || null,
+        committedAt: new Date(),
+      },
     });
 
     console.log("[coin-commit] completed", {
@@ -557,7 +594,7 @@ export async function commitCoinReservation({
     });
 
     return {
-      reservation,
+      reservation: committedReservation,
       transaction: updatedTransaction,
       balance: updatedBalance.availableCoins,
       duplicate: false,
@@ -590,7 +627,7 @@ export async function releaseCoinReservation({
     throw new Error("reservationId or cartToken is required");
   }
 
-  return prisma.$transaction(async (tx) => {
+  return runCoinTransaction(async (tx) => {
     const reservation = reservationId
       ? await tx.coinReservation.findUnique({ where: { id: reservationId } })
       : await tx.coinReservation.findUnique({
@@ -607,7 +644,7 @@ export async function releaseCoinReservation({
       throw new Error("Coin reservation not found");
     }
 
-    if (transaction.status === "CANCELLED") {
+    if (reservation.status === "RELEASED" || transaction.status === "CANCELLED") {
       return {
         transaction,
         duplicate: true,
@@ -668,9 +705,9 @@ export async function releaseCoinReservation({
         },
       });
 
-    await tx.coinReservation.updateMany({
-      where: { id: reservation.id, status: "ACTIVE" },
-      data: { status: "CANCELLED" },
+    await tx.coinReservation.update({
+      where: { id: reservation.id },
+      data: { status: "RELEASED", releasedAt: new Date() },
     });
 
     console.log("[coin-release] completed", {
@@ -682,6 +719,95 @@ export async function releaseCoinReservation({
 
     return {
       transaction: updatedTransaction,
+      balance: updatedBalance.availableCoins,
+      duplicate: false,
+      released: true,
+    };
+  });
+}
+
+/**
+ * Restore a redemption only when its already-committed order is cancelled.
+ * The reservation ID forms the immutable idempotency boundary, so duplicate
+ * orders/cancelled deliveries cannot credit the customer twice.
+ */
+export async function releaseCommittedCoinReservation({
+  shop,
+  orderId,
+  description = null,
+}) {
+  if (!shop || !orderId) {
+    throw new Error("shop and orderId are required");
+  }
+
+  return runCoinTransaction(async (tx) => {
+    const reservation = await tx.coinReservation.findUnique({
+      where: { shop_orderId: { shop, orderId: String(orderId) } },
+    });
+
+    if (!reservation || reservation.status !== "COMMITTED") {
+      return {
+        reservation: reservation || null,
+        duplicate: true,
+        released: false,
+      };
+    }
+
+    const debit = await tx.coinTransaction.findUnique({
+      where: { transactionKey: `coin-reservation:${reservation.id}` },
+    });
+    if (!debit || debit.status !== "COMPLETED") {
+      throw new Error("Committed coin reservation ledger is invalid");
+    }
+
+    const reversalKey = `coin-redemption-reversal:${shop}:${reservation.id}`;
+    const existingReversal = await tx.coinTransaction.findUnique({
+      where: { transactionKey: reversalKey },
+    });
+    if (existingReversal) {
+      return { reservation, transaction: existingReversal, duplicate: true, released: false };
+    }
+
+    const balance = await tx.customerCoinBalance.findUnique({
+      where: {
+        shop_customerId: { shop, customerId: reservation.customerId },
+      },
+    });
+    if (!balance) {
+      throw new Error("Customer coin balance not found");
+    }
+
+    const updatedBalance = await tx.customerCoinBalance.update({
+      where: {
+        shop_customerId: { shop, customerId: reservation.customerId },
+      },
+      data: { availableCoins: balance.availableCoins + reservation.coins },
+    });
+
+    const reversal = await tx.coinTransaction.create({
+      data: {
+        shop,
+        customerId: reservation.customerId,
+        type: "REVERSAL",
+        coins: reservation.coins,
+        balanceAfter: updatedBalance.availableCoins,
+        orderId: reservation.orderId,
+        orderName: reservation.orderName,
+        transactionKey: reversalKey,
+        relatedTransactionId: debit.id,
+        status: "COMPLETED",
+        description: description || `Coins restored for cancelled order ${reservation.orderName || reservation.orderId}`,
+      },
+    });
+
+    const releasedReservation = await tx.coinReservation.update({
+      where: { id: reservation.id },
+      data: { status: "RELEASED", releasedAt: new Date() },
+    });
+
+    return {
+      reservation: releasedReservation,
+      transaction: reversal,
       balance: updatedBalance.availableCoins,
       duplicate: false,
       released: true,
@@ -779,15 +905,13 @@ export async function reverseOrderCoinTransactions({
     return { reversedCoins: 0, duplicate: false };
   }
 
-  return prisma.$transaction(async (tx) => {
+  return runCoinTransaction(async (tx) => {
     const originals = await tx.coinTransaction.findMany({
       where: {
         shop,
         orderId: String(orderId),
         status: "COMPLETED",
-        type: {
-          in: ["CREDIT", "DEBIT"],
-        },
+        type: "CREDIT",
       },
     });
 
