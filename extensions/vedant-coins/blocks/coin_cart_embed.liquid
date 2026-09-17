@@ -1078,25 +1078,19 @@
     ].join(", ")));
   }
 
-  function continueCheckout() {
+  function continueCheckout(target) {
     allowCheckoutOnce = true;
 
-    const checkoutForm = document.getElementById("cart");
-    const checkoutButton = document.querySelector(
-      "button[name='checkout'], input[name='checkout']"
+    const isSubmitControl = target?.matches?.(
+      "button:not([type]), button[type='submit'], input[type='submit'], input[type='image']"
     );
-
-    if (checkoutForm && typeof checkoutForm.requestSubmit === "function") {
-      if (checkoutButton && checkoutButton.form === checkoutForm) {
-        checkoutForm.requestSubmit(checkoutButton);
-      } else {
-        checkoutForm.requestSubmit();
-      }
+    if (isSubmitControl && typeof target.form?.requestSubmit === "function") {
+      target.form.requestSubmit(target);
       return;
     }
 
-    if (checkoutButton) {
-      checkoutButton.click();
+    if (target && typeof target.click === "function") {
+      target.click();
       return;
     }
 
@@ -1114,7 +1108,7 @@
         getCart(),
       ]);
       if (selection !== "use") {
-        continueCheckout();
+        continueCheckout(target);
         return;
       }
 
@@ -1146,7 +1140,7 @@
       availableCoins = Math.max(0, balance - requestedCoins);
       showApplied(requestedCoins);
       document.dispatchEvent(new CustomEvent("cart:updated"));
-      continueCheckout();
+      continueCheckout(target);
       return result;
     })();
 
