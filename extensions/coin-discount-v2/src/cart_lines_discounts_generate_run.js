@@ -19,13 +19,6 @@ import { OrderDiscountSelectionStrategy } from "../generated/api";
  * @returns {CartLinesDiscountsGenerateRunResult}
  */
 export function cartLinesDiscountsGenerateRun(input) {
-  const buyerIdentity = input.cart?.buyerIdentity;
-  if (!buyerIdentity?.isAuthenticated || !buyerIdentity.customer?.id) {
-    return {
-      operations: [],
-    };
-  }
-
   const rawCoins = input.cart?.attribute?.value ?? "0";
 
   if (typeof rawCoins !== "string" || !/^\d+$/.test(rawCoins.trim())) {

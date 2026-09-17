@@ -1,13 +1,10 @@
 import { describe, expect, test } from "vitest";
 import { cartLinesDiscountsGenerateRun } from "../src/cart_lines_discounts_generate_run.js";
 
-function run(coins, subtotal) {
+function run(coins, subtotal, buyerIdentity) {
   return cartLinesDiscountsGenerateRun({
     cart: {
-      buyerIdentity: {
-        isAuthenticated: true,
-        customer: { id: "gid://shopify/Customer/9709033750700" },
-      },
+      ...(buyerIdentity === undefined ? {} : { buyerIdentity }),
       attribute: {
         key: "_vedant_coin_discount",
         value: String(coins),
@@ -40,14 +37,30 @@ describe("Vedant Coins discount Function", () => {
     expect(run(coins, subtotal)).toEqual({ operations: [] });
   });
 
-  test("fails closed without an authenticated customer", () => {
-    expect(cartLinesDiscountsGenerateRun({
-      cart: {
-        attribute: { key: "_vedant_coin_discount", value: "50" },
-        buyerIdentity: { isAuthenticated: false, customer: null },
-        cost: { subtotalAmount: { amount: "500" } },
-      },
-    })).toEqual({ operations: [] });
+  test("applies a ₹100 order discount to a ₹500 cart without a buyer identity", () => {
+    expect(run(100, 500)).toEqual({
+      operations: [
+        {
+          orderDiscountsAdd: {
+            candidates: [
+              {
+                message: "Vedant Coins",
+                value: { fixedAmount: { amount: "100.00" } },
+                targets: [
+                  { orderSubtotal: { excludedCartLineIds: [] } },
+                ],
+              },
+            ],
+            selectionStrategy: "FIRST",
+          },
+        },
+      ],
+    });
+  });
+
+  test("applies the cart-attribute discount for an unauthenticated buyer", () => {
+    const anonymousBuyer = { isAuthenticated: false, customer: null };
+    expect(run(100, 500, anonymousBuyer)).toEqual(run(100, 500));
   });
 
   test("rejects malformed attribute payloads", () => {

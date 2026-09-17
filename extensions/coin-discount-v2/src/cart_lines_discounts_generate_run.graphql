@@ -4,12 +4,6 @@ query CartInput {
       key
       value
     }
-    buyerIdentity {
-      isAuthenticated
-      customer {
-        id
-      }
-    }
     cost {
       subtotalAmount {
         amount

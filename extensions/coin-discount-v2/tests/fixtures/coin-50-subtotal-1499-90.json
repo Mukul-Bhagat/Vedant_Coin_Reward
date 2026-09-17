@@ -4,12 +4,6 @@
     "target": "cart.lines.discounts.generate.run",
     "input": {
       "cart": {
-        "buyerIdentity": {
-          "isAuthenticated": true,
-          "customer": {
-            "id": "gid://shopify/Customer/9709033750700"
-          }
-        },
         "attribute": {
           "key": "_vedant_coin_discount",
           "value": "50"
