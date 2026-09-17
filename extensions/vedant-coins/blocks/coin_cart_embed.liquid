@@ -729,6 +729,17 @@
     const pending = readPendingCheckout();
     if (!pending) return false;
 
+    // The cart refresh fired by updateAttribute() happens before navigation to
+    // checkout. Keep the reservation when it still belongs to this unchanged
+    // cart; otherwise that refresh would immediately release it.
+    const reservationStillMatchesCart =
+      String(cart?.token || "") === String(pending.cartToken) &&
+      String(cart?.attributes?.[reservationAttribute] || "") === String(pending.reservationId || "") &&
+      String(cart?.attributes?.[fingerprintAttribute] || "") === String(pending.fingerprint || "") &&
+      String(pending.fingerprint || "") === cartFingerprint(cart) &&
+      cartCoins(cart) > 0;
+    if (reservationStillMatchesCart) return false;
+
     await releaseReservationIfActive(
       String(pending.cartToken),
       String(pending.reservationId || ""),
