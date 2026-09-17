@@ -738,7 +738,7 @@
       String(cart?.attributes?.[fingerprintAttribute] || "") === String(pending.fingerprint || "") &&
       String(pending.fingerprint || "") === cartFingerprint(cart) &&
       cartCoins(cart) > 0;
-    if (reservationStillMatchesCart) return false;
+    if (reservationStillMatchesCart) return "UNCHANGED_CART";
 
     await releaseReservationIfActive(
       String(pending.cartToken),
@@ -933,7 +933,7 @@
     }
 
     const cart = cartResult.value;
-    const shouldReconcileCart = cartMutationPending;
+    let shouldReconcileCart = cartMutationPending;
     cartMutationPending = false;
     let currentDiscount = cartCoins(cart);
     const eligibleValue = eligibleCartValue(cart);
@@ -941,7 +941,10 @@
 
     if (readPendingCheckout()) {
       try {
-        if (await reconcilePendingCheckout(cart)) {
+        const pendingCheckoutResult = await reconcilePendingCheckout(cart);
+        if (pendingCheckoutResult === "UNCHANGED_CART") {
+          shouldReconcileCart = false;
+        } else if (pendingCheckoutResult) {
           currentDiscount = 0;
         }
         availableCoins = await getAvailableCoins();
