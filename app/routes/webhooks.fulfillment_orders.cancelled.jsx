@@ -1,38 +1,12 @@
 import { authenticate } from "../shopify.server";
-import {
-  getOrderIdFromFulfillmentOrder,
-  processManualOrderFulfillmentReward,
-} from "../services/order-reward-processing.server";
 
 export const action = async ({ request }) => {
-  const { payload, shop, topic, admin, session } =
-    await authenticate.webhook(request);
+  const { shop, topic } = await authenticate.webhook(request);
 
   console.log(`Received ${topic} webhook for ${shop}`);
 
-  const fulfillmentOrderId = String(
-    payload?.fulfillment_order?.id || payload?.id || "",
-  ).trim();
-  if (!session || !admin || !fulfillmentOrderId) {
-    return new Response();
-  }
-
-  const orderId = await getOrderIdFromFulfillmentOrder(admin, fulfillmentOrderId);
-  if (!orderId) {
-    return new Response();
-  }
-
-  const result = await processManualOrderFulfillmentReward({
-    admin,
+  console.log("[coin-order] fulfillment-order cancellation does not award reward coins", {
     shop,
-    orderId,
-  });
-
-  console.log("[coin-order] fulfillment-order cancellation reward processed", {
-    shop,
-    orderId,
-    skipped: result.skipped,
-    credits: result.creditResults.length,
   });
 
   return new Response();

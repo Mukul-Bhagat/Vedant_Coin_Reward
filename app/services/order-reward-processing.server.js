@@ -1,14 +1,3 @@
-import {
-  awardOrderRewardCoins,
-  getOrderRewardTransactionKey,
-  getRewardEligibleLineItems,
-  isOrderFulfillmentResolutionComplete,
-} from "./order-coins.server.js";
-import {
-  getOrderRewardMode,
-  isOnlinePaymentRewardMode,
-} from "./order-payment.server.js";
-
 const MAX_NODES = 250;
 
 /**
@@ -125,89 +114,7 @@ export async function getOrderRewardState(admin, orderId) {
   return order;
 }
 
-export async function processManualOrderFulfillmentReward({
-  admin,
-  shop,
-  orderId,
-}) {
-  const order = await getOrderRewardState(admin, orderId);
-  if (!order?.legacyResourceId || !order.customer?.legacyResourceId) {
-    return { skipped: "missing-order-or-customer", creditResults: [] };
-  }
-
-  const paymentMode = await getOrderRewardMode({
-    admin,
-    shop,
-    customerId: String(order.customer.legacyResourceId),
-    orderId: String(order.legacyResourceId),
-    orderName: order.name || null,
-  });
-  if (isOnlinePaymentRewardMode(paymentMode)) {
-    return { skipped: "online-payment-mode", creditResults: [] };
-  }
-
-  if (!isOrderFulfillmentResolutionComplete(order)) {
-    return { skipped: "fulfillment-pending", creditResults: [] };
-  }
-
-  const lineItems = getRewardEligibleLineItems(order);
-  if (lineItems.length === 0) {
-    return { skipped: "no-fulfilled-reward-lines", creditResults: [] };
-  }
-
-  const rewardOrder = {
-    id: String(order.legacyResourceId),
-    name: order.name || null,
-    line_items: lineItems,
-  };
-  const result = await awardOrderRewardCoins({
-    admin,
-    shop,
-    customerId: String(order.customer.legacyResourceId),
-    order: rewardOrder,
-    getTransactionKey: getOrderRewardTransactionKey,
-  });
-
-  return {
-    skipped: null,
-    order: rewardOrder,
-    ...result,
-  };
-}
-
-export async function getOrderIdFromFulfillmentOrder(admin, fulfillmentOrderId) {
-  const response = await admin.graphql(
-    `#graphql
-      query CoinRewardFulfillmentOrder($id: ID!) {
-        fulfillmentOrder(id: $id) {
-          order {
-            legacyResourceId
-          }
-        }
-      }
-    `,
-    { variables: { id: toFulfillmentOrderGid(fulfillmentOrderId) } },
-  );
-  const responseJson = await response.json();
-
-  if (responseJson.errors?.length) {
-    console.error("Failed to read fulfillment order:", responseJson.errors);
-    throw new Error("Shopify fulfillment order query failed");
-  }
-
-  return String(
-    responseJson.data?.fulfillmentOrder?.order?.legacyResourceId || "",
-  ).trim() || null;
-}
-
 function toOrderGid(orderId) {
   const id = String(orderId || "").trim();
   return id.startsWith("gid://") ? id : `gid://shopify/Order/${id}`;
-}
-
-function toFulfillmentOrderGid(fulfillmentOrderId) {
-  const id = String(fulfillmentOrderId || "").trim();
-  return id.startsWith("gid://")
-    ? id
-    : `gid://shopify/FulfillmentOrder/${id}`;
 }

@@ -1,5 +1,5 @@
 {% assign reward_source = product.metafields.custom.reward_coins_earned.value | default: product.metafields.custom.reward_coins_earned %}
-{% assign reward_coins = reward_source | plus: 0 %}
+{% assign reward_coins = reward_source | plus: 0 | floor %}
 
 {% if product and reward_coins > 0 %}
   <div id="vedant-product-rewards-{{ block.id }}" class="vedant-product-rewards">

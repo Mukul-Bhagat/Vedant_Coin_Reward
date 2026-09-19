@@ -9,9 +9,8 @@ const TERMINAL_FULFILLMENT_ORDER_STATUSES = new Set([
 ]);
 
 /**
- * A line reward has one identity regardless of which webhook reaches it.
- * Paid and fulfillment-resolution paths therefore cannot create separate
- * credits for the same order line.
+ * A line reward has one identity regardless of how Shopify represents its
+ * line-item ID. `orders/paid` is the sole production reward trigger.
  */
 export function getOrderRewardTransactionKey({
   shop,
@@ -21,7 +20,7 @@ export function getOrderRewardTransactionKey({
 }) {
   const normalizedShop = String(shop || "").trim();
   const order = String(orderId || "").trim();
-  const item = String(lineItemId || "").trim();
+  const item = normalizeShopifyLegacyId(lineItemId);
   const index = Number(lineIndex);
 
   if (!normalizedShop) {
@@ -40,6 +39,17 @@ export function getOrderRewardTransactionKey({
   }
 
   return `order-reward:${normalizedShop}:${order}:line-index:${index}`;
+}
+
+/**
+ * Shopify webhooks use legacy numeric IDs while Admin GraphQL can return a
+ * GID for the same resource. Canonicalize GIDs so a retried delivery cannot
+ * create a second reward transaction under a different key.
+ */
+export function normalizeShopifyLegacyId(id) {
+  const value = String(id || "").trim();
+  const gidMatch = value.match(/^gid:\/\/shopify\/[^/]+\/([^/?#]+)(?:[?#].*)?$/);
+  return gidMatch?.[1] || value;
 }
 
 export function calculateOrderRewardCredits({
@@ -265,6 +275,7 @@ export async function awardOrderRewardCoins({
 
   for (const rewardCredit of rewardCredits) {
     const item = rewardCredit.lineItem;
+    const lineItemId = normalizeShopifyLegacyId(item.id);
     const result = await credit({
       shop,
       customerId: String(customerId),
@@ -272,7 +283,7 @@ export async function awardOrderRewardCoins({
       transactionKey: getTransactionKey({
         shop,
         orderId: order.id,
-        lineItemId: item.id,
+        lineItemId,
         lineIndex: rewardCredit.index,
         rewardedQuantity: rewardCredit.quantity,
       }),
@@ -280,7 +291,7 @@ export async function awardOrderRewardCoins({
       orderName: order.name || null,
       productId: rewardCredit.productId,
       productTitle: rewardCredit.productTitle,
-      lineItemId: item.id,
+      lineItemId,
       rewardQuantity: rewardCredit.quantity,
       description: `Reward coins earned from ${order.name || order.id}`,
     });

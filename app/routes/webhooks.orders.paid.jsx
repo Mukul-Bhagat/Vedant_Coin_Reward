@@ -3,9 +3,6 @@ import {
   awardOrderRewardCoins,
   getOrderRewardTransactionKey,
 } from "../services/order-coins.server";
-import {
-  getOrderRewardMode,
-} from "../services/order-payment.server";
 
 export const action = async ({ request }) => {
   const {
@@ -39,16 +36,6 @@ export const action = async ({ request }) => {
     return new Response();
   }
 
-  // `orders/paid` is an online reward trigger only when the store's existing
-  // payment customization is in ONLINE mode. Financial status and gateway
-  // labels are not reliable evidence of an online payment.
-  await getOrderRewardMode({
-    admin,
-    shop,
-    customerId: String(customerId),
-    orderId: String(order.id),
-    orderName: order.name || null,
-  });
   const { creditResults } = await awardOrderRewardCoins({
     admin,
     shop,
