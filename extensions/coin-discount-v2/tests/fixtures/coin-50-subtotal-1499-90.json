@@ -40,7 +40,7 @@
                 ]
               }
             ],
-            "selectionStrategy": "FIRST"
+            "selectionStrategy": "MAXIMUM"
           }
         }
       ]

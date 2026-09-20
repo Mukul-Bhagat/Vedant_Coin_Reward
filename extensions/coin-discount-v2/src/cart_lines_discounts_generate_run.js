@@ -76,7 +76,9 @@ export function cartLinesDiscountsGenerateRun(input) {
               ],
             },
           ],
-          selectionStrategy: OrderDiscountSelectionStrategy.First,
+          // There is one candidate today, but MAXIMUM keeps the operation
+          // correct if another eligible coin candidate is introduced later.
+          selectionStrategy: OrderDiscountSelectionStrategy.Maximum,
         },
       },
     ],
