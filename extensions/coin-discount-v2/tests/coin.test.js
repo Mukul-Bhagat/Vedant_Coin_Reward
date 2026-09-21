@@ -70,6 +70,24 @@ describe("Vedant Coins discount Function", () => {
     expect(result.operations[0].orderDiscountsAdd.candidates[0].value.fixedAmount.amount).toBe("80.00");
   });
 
+  test("returns a ₹30 order-subtotal discount for a ₹30 cart", () => {
+    const result = run({ coins: "30", subtotal: 30 });
+    expect(result.operations).toEqual([
+      {
+        orderDiscountsAdd: {
+          candidates: [
+            {
+              message: "Vedant Coins",
+              value: { fixedAmount: { amount: "30.00" } },
+              targets: [{ orderSubtotal: { excludedCartLineIds: [] } }],
+            },
+          ],
+          selectionStrategy: "MAXIMUM",
+        },
+      },
+    ]);
+  });
+
   test.each([
     ["0", 699],
     ["-100", 699],
