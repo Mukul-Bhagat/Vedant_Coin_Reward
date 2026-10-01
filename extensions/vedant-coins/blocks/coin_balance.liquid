@@ -459,10 +459,20 @@
     "button[aria-label*='Account']",
     "button[title*='Account']",
   ];
+  const mobileDrawerSelector = [
+    "menu-drawer",
+    ".menu-drawer",
+    "#menu-drawer",
+    ".header-drawer",
+    "[data-mobile-nav]",
+    "[data-menu-drawer]",
+  ].join(", ");
 
   let currentCoins = null;
   let refreshTimer;
   let retryTimer;
+  let mountRetryTimer;
+  let mountRetryAttempts = 0;
 
   function render() {
     if (currentCoins === null) {
@@ -478,57 +488,54 @@
     trigger.setAttribute("aria-label", currentCoins + " coins available. View your Vedant coin balance");
   }
 
+  function findHeaderReference() {
+    const selectorGroups = [accountSelectors, cartSelectors];
+
+    for (const selectors of selectorGroups) {
+      for (const selector of selectors) {
+        const reference = Array.from(document.querySelectorAll(selector))
+          .map(function (candidate) {
+            return candidate.closest("a, button") || candidate;
+          })
+          .find(function (candidate) {
+            return (
+              candidate.matches("a, button") &&
+              candidate.closest("header, .shopify-section-header") &&
+              !candidate.closest(mobileDrawerSelector)
+            );
+          });
+        if (reference) return reference;
+      }
+    }
+
+    return null;
+  }
+
   function resolveHeaderPlacement() {
-    const mobileDrawerSelectors = [
-      "menu-drawer",
-      ".menu-drawer",
-      "#menu-drawer",
-      ".header-drawer",
-      "[data-mobile-nav]",
-      "[data-menu-drawer]",
-    ];
-    const containers = Array.from(
-      document.querySelectorAll(headerSelectors.join(", "))
-    );
-    const mobileDrawerSelector = mobileDrawerSelectors.join(", ");
-    const specificHeaderSelectors = headerSelectors.slice(0, 4).join(", ");
-    const specificContainer = containers.find(function (candidate) {
-      return (
-        candidate.matches(specificHeaderSelectors) &&
-        !candidate.closest(mobileDrawerSelector)
-      );
+    const iconContainerSelectors = headerSelectors.slice(0, 4).join(", ");
+    const container = Array.from(
+      document.querySelectorAll(iconContainerSelectors)
+    ).find(function (candidate) {
+      return !candidate.closest(mobileDrawerSelector);
     });
-    const broadContainer = containers.find(function (candidate) {
-      return (
-        !candidate.matches(specificHeaderSelectors) &&
-        !candidate.closest(mobileDrawerSelector) &&
-        !candidate.querySelector(mobileDrawerSelector)
-      );
-    });
-    const container = specificContainer || broadContainer;
-    if (!container) return null;
-    const scope = container.querySelector ? container : document;
-    const reference = [...cartSelectors, ...accountSelectors]
-      .map(function (selector) {
-        return scope.querySelector(selector);
-      })
-      .find(Boolean);
-    return {
-      container,
-      reference: reference ? reference.closest("a, button") || reference : null,
-    };
+
+    return container ? { container } : null;
   }
 
   function mount() {
-    const placement = resolveHeaderPlacement();
-    if (!placement) return false;
-
-    const { container, reference } = placement;
+    const reference = findHeaderReference();
     if (reference && reference.parentElement) {
       if (root.parentElement !== reference.parentElement || root.nextElementSibling !== reference) {
         reference.parentElement.insertBefore(root, reference);
       }
-    } else if (!container.contains(root)) {
+      return true;
+    }
+
+    const placement = resolveHeaderPlacement();
+    if (!placement) return false;
+
+    const { container } = placement;
+    if (!container.contains(root)) {
       container.appendChild(root);
     }
 
@@ -538,9 +545,16 @@
   async function refresh() {
     if (!mount()) {
       root.hidden = true;
+      if (mountRetryAttempts < 8) {
+        clearTimeout(mountRetryTimer);
+        mountRetryAttempts += 1;
+        mountRetryTimer = setTimeout(refresh, 250);
+      }
       return;
     }
 
+    clearTimeout(mountRetryTimer);
+    mountRetryAttempts = 0;
     root.hidden = false;
 
     try {
