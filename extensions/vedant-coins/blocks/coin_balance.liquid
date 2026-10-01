@@ -479,7 +479,20 @@
   }
 
   function resolveHeaderPlacement() {
-    const container = document.querySelector(headerSelectors.join(", "));
+    const mobileDrawerSelectors = [
+      "menu-drawer",
+      ".menu-drawer",
+      "#menu-drawer",
+      ".header-drawer",
+      "[data-mobile-nav]",
+      "[data-menu-drawer]",
+    ];
+    const containers = Array.from(
+      document.querySelectorAll(headerSelectors.join(", "))
+    );
+    const container = containers.find(function (candidate) {
+      return !candidate.closest(mobileDrawerSelectors.join(", "));
+    });
     if (!container) return null;
     const scope = container.querySelector ? container : document;
     const reference = [...cartSelectors, ...accountSelectors]
