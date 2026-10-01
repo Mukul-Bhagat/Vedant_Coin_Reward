@@ -490,8 +490,12 @@
     const containers = Array.from(
       document.querySelectorAll(headerSelectors.join(", "))
     );
+    const mobileDrawerSelector = mobileDrawerSelectors.join(", ");
     const container = containers.find(function (candidate) {
-      return !candidate.closest(mobileDrawerSelectors.join(", "));
+      return (
+        !candidate.closest(mobileDrawerSelector) &&
+        !candidate.querySelector(mobileDrawerSelector)
+      );
     });
     if (!container) return null;
     const scope = container.querySelector ? container : document;
