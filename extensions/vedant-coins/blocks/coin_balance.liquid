@@ -491,12 +491,21 @@
       document.querySelectorAll(headerSelectors.join(", "))
     );
     const mobileDrawerSelector = mobileDrawerSelectors.join(", ");
-    const container = containers.find(function (candidate) {
+    const specificHeaderSelectors = headerSelectors.slice(0, 4).join(", ");
+    const specificContainer = containers.find(function (candidate) {
       return (
+        candidate.matches(specificHeaderSelectors) &&
+        !candidate.closest(mobileDrawerSelector)
+      );
+    });
+    const broadContainer = containers.find(function (candidate) {
+      return (
+        !candidate.matches(specificHeaderSelectors) &&
         !candidate.closest(mobileDrawerSelector) &&
         !candidate.querySelector(mobileDrawerSelector)
       );
     });
+    const container = specificContainer || broadContainer;
     if (!container) return null;
     const scope = container.querySelector ? container : document;
     const reference = [...cartSelectors, ...accountSelectors]
