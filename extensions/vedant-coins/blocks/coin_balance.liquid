@@ -422,18 +422,6 @@
       height: 52px;
     }
   }
-
-  @media screen and (max-width: 749px) {
-    #header-component:has(#Details-menu-drawer-container.menu-open)
-      .vedant-header-coins {
-      display: none !important;
-    }
-
-    #header-component:has(#Details-menu-drawer-container[open])
-      .vedant-header-coins {
-      display: none !important;
-    }
-  }
 </style>
 
 <script>
@@ -468,18 +456,7 @@
     trigger.setAttribute("aria-label", currentCoins + " coins available. View your Vedant coin balance");
   }
 
-  const drawerSelector = [
-    "menu-drawer",
-    ".menu-drawer",
-    "#menu-drawer",
-    ".header-drawer",
-    "header-menu",
-    "#header-menu",
-    ".header-menu",
-    "[data-header-menu]",
-    "[data-mobile-nav]",
-    "[data-menu-drawer]",
-  ].join(", ");
+  const drawerSelector = "header-drawer, #Details-menu-drawer-container, .menu-drawer";
 
   function isInsideDrawer(node) {
     return !!node && !!node.closest(drawerSelector);
