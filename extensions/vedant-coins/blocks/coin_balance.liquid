@@ -457,51 +457,84 @@
     trigger.setAttribute("aria-label", currentCoins + " coins available. View your Vedant coin balance");
   }
 
-  function getHeaderActionsContainer() {
-    const headerComponent = document.querySelector("#header-component");
-    if (!headerComponent) return null;
+  const drawerSelector = [
+    "menu-drawer",
+    ".menu-drawer",
+    "#menu-drawer",
+    ".header-drawer",
+    "[data-mobile-nav]",
+    "[data-menu-drawer]",
+  ].join(", ");
 
-    const actions = headerComponent.querySelector("header-actions");
-    return actions || null;
+  function isInsideDrawer(node) {
+    return !!node && !!node.closest(drawerSelector);
   }
 
   function findCartAction(container) {
-    if (!container) return null;
+    if (!container || isInsideDrawer(container)) return null;
 
     const selectors = [
-      "a[href*='/cart']",
+      "a[href*='/cart' i]",
       "button[aria-label*='Cart' i]",
       "button[title*='Cart' i]",
       "[data-cart-icon]",
       ".cart-count-bubble",
-      "a[href*='cart']",
+      "a[href*='cart' i]",
     ];
 
     for (const selector of selectors) {
-      const candidate = container.querySelector(selector);
+      const candidates = Array.from(container.querySelectorAll(selector));
+      const candidate = candidates.find(function (cartNode) {
+        return !isInsideDrawer(cartNode);
+      });
       if (candidate) return candidate;
     }
 
     return null;
   }
 
+  function findValidHeaderActionsContainer() {
+    const headerComponent = document.querySelector("#header-component");
+    if (!headerComponent) return null;
+
+    const candidates = Array.from(headerComponent.querySelectorAll("header-actions"));
+
+    return candidates.find(function (actions) {
+      if (isInsideDrawer(actions)) return false;
+
+      const cartAction = findCartAction(actions);
+      if (!cartAction) return false;
+
+      const cartParent = cartAction.closest("header-actions");
+      return cartParent === actions || actions.contains(cartAction);
+    }) || null;
+  }
+
   function mount() {
-    const actionsContainer = getHeaderActionsContainer();
-    if (!actionsContainer) return false;
+    if (root.closest(drawerSelector)) {
+      const parent = root.parentElement;
+      if (parent) parent.removeChild(root);
+      root.hidden = true;
+      return false;
+    }
+
+    const actionsContainer = findValidHeaderActionsContainer();
+    if (!actionsContainer) {
+      root.hidden = true;
+      return false;
+    }
 
     const cartAction = findCartAction(actionsContainer);
-
-    if (cartAction && cartAction.parentElement === actionsContainer) {
-      if (root.parentElement !== actionsContainer || root.nextElementSibling !== cartAction) {
-        actionsContainer.insertBefore(root, cartAction);
-      }
-      return true;
+    if (!cartAction) {
+      root.hidden = true;
+      return false;
     }
 
-    if (!actionsContainer.contains(root)) {
-      actionsContainer.appendChild(root);
+    if (root.parentElement !== actionsContainer || root.nextElementSibling !== cartAction) {
+      actionsContainer.insertBefore(root, cartAction);
     }
 
+    root.hidden = false;
     return true;
   }
 
@@ -596,9 +629,36 @@
     }
   });
 
-  window.addEventListener("resize", positionMobilePopup);
+  let headerObserver;
+
+  function setupHeaderObserver() {
+    const headerComponent = document.querySelector("#header-component");
+    if (!headerComponent || headerObserver) return;
+
+    headerObserver = new MutationObserver(function () {
+      if (root.closest(drawerSelector)) {
+        const parent = root.parentElement;
+        if (parent) parent.removeChild(root);
+      }
+
+      mount();
+    });
+
+    headerObserver.observe(headerComponent, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["class", "id", "style", "hidden"],
+    });
+  }
+
+  window.addEventListener("resize", function () {
+    positionMobilePopup();
+    mount();
+  });
   window.addEventListener("scroll", positionMobilePopup, true);
   document.addEventListener("cart:updated", scheduleRefresh);
+  setupHeaderObserver();
   refresh();
 })();
 </script>
