@@ -422,6 +422,15 @@
       height: 52px;
     }
   }
+
+  @media screen and (max-width: 749px) {
+    #header-component:has(#Details-menu-drawer-container.menu-open)
+      .vedant-header-coins,
+    #header-component:has(#Details-menu-drawer-container[open])
+      .vedant-header-coins {
+      display: none !important;
+    }
+  }
 </style>
 
 <script>
