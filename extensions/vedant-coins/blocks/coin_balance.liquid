@@ -437,37 +437,6 @@
   const closeButton = root.querySelector(".vedant-header-coins__close");
   const total = root.querySelector("[data-vedant-header-total]");
   const popupTotal = root.querySelector("[data-vedant-header-popup-total]");
-  const headerSelectors = [
-    ".header__icons",
-    ".header-icons",
-    ".header__icon-list",
-    "[data-header-icons]",
-    "header",
-    ".shopify-section-header",
-  ];
-  const cartSelectors = [
-    ".header__icon--cart",
-    "a[href*='/cart']",
-    "button[aria-label*='Cart']",
-    "button[title*='Cart']",
-    "[data-cart-icon]",
-    ".cart-count-bubble",
-  ];
-  const accountSelectors = [
-    ".header__icon--account",
-    "a[href*='/account']",
-    "button[aria-label*='Account']",
-    "button[title*='Account']",
-  ];
-  const mobileDrawerSelector = [
-    "menu-drawer",
-    ".menu-drawer",
-    "#menu-drawer",
-    ".header-drawer",
-    "[data-mobile-nav]",
-    "[data-menu-drawer]",
-  ].join(", ");
-
   let currentCoins = null;
   let refreshTimer;
   let retryTimer;
@@ -488,55 +457,49 @@
     trigger.setAttribute("aria-label", currentCoins + " coins available. View your Vedant coin balance");
   }
 
-  function findHeaderReference() {
-    const selectorGroups = [accountSelectors, cartSelectors];
+  function getHeaderActionsContainer() {
+    const headerComponent = document.querySelector("#header-component");
+    if (!headerComponent) return null;
 
-    for (const selectors of selectorGroups) {
-      for (const selector of selectors) {
-        const reference = Array.from(document.querySelectorAll(selector))
-          .map(function (candidate) {
-            return candidate.closest("a, button") || candidate;
-          })
-          .find(function (candidate) {
-            return (
-              candidate.matches("a, button") &&
-              candidate.closest("header, .shopify-section-header") &&
-              !candidate.closest(mobileDrawerSelector)
-            );
-          });
-        if (reference) return reference;
-      }
+    const actions = headerComponent.querySelector("header-actions");
+    return actions || null;
+  }
+
+  function findCartAction(container) {
+    if (!container) return null;
+
+    const selectors = [
+      "a[href*='/cart']",
+      "button[aria-label*='Cart' i]",
+      "button[title*='Cart' i]",
+      "[data-cart-icon]",
+      ".cart-count-bubble",
+      "a[href*='cart']",
+    ];
+
+    for (const selector of selectors) {
+      const candidate = container.querySelector(selector);
+      if (candidate) return candidate;
     }
 
     return null;
   }
 
-  function resolveHeaderPlacement() {
-    const iconContainerSelectors = headerSelectors.slice(0, 4).join(", ");
-    const container = Array.from(
-      document.querySelectorAll(iconContainerSelectors)
-    ).find(function (candidate) {
-      return !candidate.closest(mobileDrawerSelector);
-    });
-
-    return container ? { container } : null;
-  }
-
   function mount() {
-    const reference = findHeaderReference();
-    if (reference && reference.parentElement) {
-      if (root.parentElement !== reference.parentElement || root.nextElementSibling !== reference) {
-        reference.parentElement.insertBefore(root, reference);
+    const actionsContainer = getHeaderActionsContainer();
+    if (!actionsContainer) return false;
+
+    const cartAction = findCartAction(actionsContainer);
+
+    if (cartAction && cartAction.parentElement === actionsContainer) {
+      if (root.parentElement !== actionsContainer || root.nextElementSibling !== cartAction) {
+        actionsContainer.insertBefore(root, cartAction);
       }
       return true;
     }
 
-    const placement = resolveHeaderPlacement();
-    if (!placement) return false;
-
-    const { container } = placement;
-    if (!container.contains(root)) {
-      container.appendChild(root);
+    if (!actionsContainer.contains(root)) {
+      actionsContainer.appendChild(root);
     }
 
     return true;
