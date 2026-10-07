@@ -462,6 +462,10 @@
     ".menu-drawer",
     "#menu-drawer",
     ".header-drawer",
+    "header-menu",
+    "#header-menu",
+    ".header-menu",
+    "[data-header-menu]",
     "[data-mobile-nav]",
     "[data-menu-drawer]",
   ].join(", ");
@@ -510,11 +514,43 @@
     }) || null;
   }
 
+  function isMobileDrawerOpen() {
+    if (!window.matchMedia("(max-width: 640px)").matches) return false;
+
+    const candidates = Array.from(document.querySelectorAll(drawerSelector));
+
+    return candidates.some(function (candidate) {
+      if (!candidate) return false;
+      if (candidate.hidden) return false;
+      if (candidate.getAttribute("aria-expanded") === "true") return true;
+      if (candidate.getAttribute("aria-hidden") === "true") return false;
+      return candidate.hasAttribute("open");
+    });
+  }
+
+  function syncMobileDrawerVisibility() {
+    if (isMobileDrawerOpen()) {
+      closePopup();
+      root.hidden = true;
+      return false;
+    }
+
+    if (!root.closest(drawerSelector)) {
+      root.hidden = false;
+    }
+
+    return true;
+  }
+
   function mount() {
     if (root.closest(drawerSelector)) {
       const parent = root.parentElement;
       if (parent) parent.removeChild(root);
       root.hidden = true;
+      return false;
+    }
+
+    if (!syncMobileDrawerVisibility()) {
       return false;
     }
 
@@ -539,6 +575,11 @@
   }
 
   async function refresh() {
+    if (isMobileDrawerOpen()) {
+      root.hidden = true;
+      return;
+    }
+
     if (!mount()) {
       root.hidden = true;
       if (mountRetryAttempts < 8) {
@@ -641,6 +682,7 @@
         if (parent) parent.removeChild(root);
       }
 
+      syncMobileDrawerVisibility();
       mount();
     });
 
@@ -648,12 +690,13 @@
       childList: true,
       subtree: true,
       attributes: true,
-      attributeFilter: ["class", "id", "style", "hidden"],
+      attributeFilter: ["class", "id", "style", "hidden", "aria-expanded", "aria-hidden", "open"],
     });
   }
 
   window.addEventListener("resize", function () {
     positionMobilePopup();
+    syncMobileDrawerVisibility();
     mount();
   });
   window.addEventListener("scroll", positionMobilePopup, true);
